@@ -3,3 +3,4 @@
 /// <reference path="should/should.d.ts" />
 /// <reference path="through2/through2.d.ts" />
 /// <reference path="vinyl/vinyl.d.ts" />
+/// <reference path="gulp-replace/gulp-replace.d.ts" />

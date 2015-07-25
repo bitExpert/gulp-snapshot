@@ -2,10 +2,20 @@
 import * as through from 'through2';
 import File = require('vinyl');
 
-export default function () {
+export function snapshot() {
     return through.obj(function (file: File, enc: string, done: Function) {
 
-        this.push(file);
-        return done();
+        done(null, file);
+    });
+}
+
+export function compare(resultCallback?: (differences: any[]) => void) {
+    return through.obj(function (file: File, enc: string, done: Function) {
+
+        if (resultCallback) {
+            resultCallback([])
+        }
+
+        done(null, file);
     });
 }

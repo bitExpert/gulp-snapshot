@@ -1,9 +1,17 @@
 'use strict';
 var through = require('through2');
-function default_1() {
+function snapshot() {
     return through.obj(function (file, enc, done) {
-        this.push(file);
-        return done();
+        done(null, file);
     });
 }
-exports.default = default_1;
+exports.snapshot = snapshot;
+function compare(resultCallback) {
+    return through.obj(function (file, enc, done) {
+        if (resultCallback) {
+            resultCallback([]);
+        }
+        done(null, file);
+    });
+}
+exports.compare = compare;

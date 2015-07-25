@@ -1,7 +1,7 @@
 {
-  "name": "gulp-changed-in-stream",
+  "name": "gulp-compare-stream",
   "version": "0.0.1",
-  "description": "Gulp plugin to determine whether something has changed files on the stream",
+  "description": "Take and compare hash-based snapshots of Gulp stream states",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -11,7 +11,9 @@
   },
   "keywords": [
     "gulpplugin",
+    "diff",
     "changed",
+    "hash",
     "delta"
   ],
   "author": "justin.bay@gmail.com",
@@ -21,9 +23,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jwbay/gulp-json-sort.git"
+    "url": "https://github.com/jwbay/gulp-compare-stream.git"
   },
   "devDependencies": {
+    "gulp-replace": "^0.5.3",
     "mocha": "^2.2.5",
     "should": "^7.0.2",
     "stream-assert": "^2.0.2",
