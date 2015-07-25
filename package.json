@@ -1,0 +1,32 @@
+{
+  "name": "gulp-changed-in-stream",
+  "version": "0.0.1",
+  "description": "Gulp plugin to determine whether something has changed files on the stream",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "gulpplugin",
+    "changed",
+    "delta"
+  ],
+  "author": "justin.bay@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "through2": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jwbay/gulp-json-sort.git"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "should": "^7.0.2",
+    "stream-assert": "^2.0.2",
+    "vinyl": "^0.5.0"
+  }
+}
