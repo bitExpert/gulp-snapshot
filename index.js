@@ -1,17 +1,29 @@
 'use strict';
 var through = require('through2');
+;
+var firstState = [];
+var secondState = [];
+var capture = (function () {
+    return function (collection, flush) {
+        return through.obj(function (file, enc, done) {
+            collection.push({
+                hash: 'abc123',
+                path: file.path
+            });
+            done(null, file);
+        }, flush);
+    };
+})();
 function snapshot() {
-    return through.obj(function (file, enc, done) {
-        done(null, file);
-    });
+    return capture(firstState);
 }
 exports.snapshot = snapshot;
 function compare(resultCallback) {
-    return through.obj(function (file, enc, done) {
+    return capture(secondState, function (done) {
         if (resultCallback) {
             resultCallback([]);
         }
-        done(null, file);
+        done();
     });
 }
 exports.compare = compare;

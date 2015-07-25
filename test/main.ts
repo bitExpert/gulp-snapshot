@@ -2,7 +2,7 @@
 import * as through from 'through2';
 import * as assert from 'stream-assert';
 import * as hasChanged from '../index';
-import replace = require('gulp-replace');
+//import replace = require('gulp-replace');
 import File = require('vinyl');
 import { Transform } from 'stream';
 import 'should';
@@ -44,6 +44,34 @@ it('should provide empty array to callback when states match', done => {
         .pipe(hasChanged.snapshot())
         .pipe(hasChanged.compare(differences => {
             differences.length.should.eql(0);
+        }))
+        .pipe(assert.end(done));
+});
+
+it('should provide diff entry when path changes', done => {
+    sourceString('hello world')
+        .pipe(hasChanged.snapshot())
+        .pipe(through.obj(function(file, enc, done) {
+            file.path = '/home/different/file.txt';
+            this.push(file);
+            done();
+        }))
+        .pipe(hasChanged.compare(differences => {
+            differences.length.should.eql(1);
+        }))
+        .pipe(assert.end(done));
+});
+
+it('should provide diff entry when contents change', done => {
+    sourceString('hello world')
+        .pipe(hasChanged.snapshot())
+        .pipe(through.obj(function (file, enc, done) {
+            file.contents = new Buffer('goodbye world');
+            this.push(file);
+            done();
+        }))
+        .pipe(hasChanged.compare(differences => {
+            differences.length.should.eql(1);
         }))
         .pipe(assert.end(done));
 });
