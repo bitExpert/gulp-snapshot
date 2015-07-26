@@ -67,6 +67,6 @@ function compare(resultCallback) {
 }
 exports.compare = compare;
 function reset() {
-    streamStates = [];
+    streamStates.length = 0;
 }
 exports.reset = reset;

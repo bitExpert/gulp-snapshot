@@ -27,17 +27,17 @@ interface IHashesToPaths {
     [hash: string]: string
 }
 
-let streamStates: IPathsToHashes[] = [];
+const streamStates: IPathsToHashes[] = [];
 
 export function take() {
-    let streamState: IPathsToHashes = {};
+    const streamState: IPathsToHashes = {};
     streamStates.unshift(streamState);
     if (streamStates.length > 2) {
         streamStates.length = 2;
     }
 
     return through.obj(function store(file: File, enc: string, done: Function) {
-        let hash = crypto
+        const hash = crypto
             .createHash('sha1')
             .update(file.contents) //TODO support stream contents
             .digest('hex');
@@ -56,7 +56,7 @@ function passthrough(file: File, enc: string, done: Function) {
 
 export function compare(resultCallback: (difference: IStreamDifference) => void): NodeJS.ReadWriteStream {
     return through.obj(passthrough, <any>function flush(done: Function) {
-        let diff: IStreamDifference = {
+        const diff: IStreamDifference = {
             addedFiles: [],
             changedFiles: [],
             duplicatedFiles: [],
@@ -65,23 +65,23 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             same: null
         };
 
-        let oldFiles = streamStates[1];
-        let newFiles = streamStates[0];
-        let oldHashes = invert<IPathsToHashes, IHashesToPaths>(oldFiles);
-        let newHashes = invert<IPathsToHashes, IHashesToPaths>(newFiles);
+        const oldFiles = streamStates[1];
+        const newFiles = streamStates[0];
+        const oldHashes = invert<IPathsToHashes, IHashesToPaths>(oldFiles);
+        const newHashes = invert<IPathsToHashes, IHashesToPaths>(newFiles);
         
-        for (let oldPath of Object.keys(oldFiles)) {
-            let oldHash = oldFiles[oldPath];
+        for (const oldPath of Object.keys(oldFiles)) {
+            const oldHash = oldFiles[oldPath];
             if (!newFiles.hasOwnProperty(oldPath) && !newHashes.hasOwnProperty(oldHash)) {
                 diff.removedFiles.push(oldPath);
             }
         }
         
-        for (let newPath of Object.keys(newFiles)) {
-            let newHash = newFiles[newPath];
+        for (const newPath of Object.keys(newFiles)) {
+            const newHash = newFiles[newPath];
             if (!oldFiles.hasOwnProperty(newPath)) {
                 if (oldHashes.hasOwnProperty(newHash)) {
-                    let oldPath = oldHashes[newHash];
+                    const oldPath = oldHashes[newHash];
                     diff.movedFiles.push({
                         was: oldPath,
                         is: newPath
@@ -98,5 +98,5 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
 }
 
 export function reset() {
-    streamStates = [];
+    streamStates.length = 0;
 }
