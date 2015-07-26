@@ -216,4 +216,19 @@ describe('copied files', () => {
             }))
             .pipe(assert.end(done));
     });
+
+    it('should mark as copy if all sources are dropped', done => {
+        sourceString('hello world', '/home/source-one.txt')
+            .pipe(addHello('/home/source-two.txt'))
+            .pipe(snapshot.take())
+            .pipe(dropFiles())
+            .pipe(addHello('/home/copy.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.copiedFiles[0].is.should.eql('/home/copy.txt');
+                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
+                diff.copiedFiles[0].was.should.containEql('/home/source-two.txt');
+            }))
+            .pipe(assert.end(done));
+    });
 });

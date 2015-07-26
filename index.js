@@ -70,7 +70,7 @@ function compare(resultCallback) {
                 diff.movedFiles.push({ was: oldPath, is: newPath });
                 break;
             }
-            if (pathIsNew && !contentsAreNew && !hashOccursOnceInNewFiles) {
+            if (pathIsNew && !contentsAreNew && (!hashOccursOnceInNewFiles || !hashOccursOnceInOldFiles)) {
                 var originalPaths = Object.keys(oldFiles).filter(function (path) { return oldFiles[path] === newHash; });
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;

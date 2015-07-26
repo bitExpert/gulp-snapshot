@@ -106,7 +106,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
                 break;
             }
 
-            if (pathIsNew && !contentsAreNew && !hashOccursOnceInNewFiles) {
+            if (pathIsNew && !contentsAreNew && (!hashOccursOnceInNewFiles || !hashOccursOnceInOldFiles)) {
                 const originalPaths = Object.keys(oldFiles).filter(path => oldFiles[path] === newHash);
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;
