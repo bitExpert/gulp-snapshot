@@ -40,16 +40,25 @@ function compare(resultCallback) {
         var newHashes = invert(newFiles);
         for (var _i = 0, _a = Object.keys(oldFiles); _i < _a.length; _i++) {
             var oldPath = _a[_i];
+            var oldHash = oldFiles[oldPath];
+            if (!newFiles.hasOwnProperty(oldPath) && !newHashes.hasOwnProperty(oldHash)) {
+                diff.removedFiles.push(oldPath);
+            }
         }
         for (var _b = 0, _c = Object.keys(newFiles); _b < _c.length; _b++) {
             var newPath = _c[_b];
             var newHash = newFiles[newPath];
-            if (!oldFiles.hasOwnProperty(newPath) && oldHashes.hasOwnProperty(newHash)) {
-                var oldPath = oldHashes[newHash];
-                diff.movedFiles.push({
-                    was: oldPath,
-                    now: newPath
-                });
+            if (!oldFiles.hasOwnProperty(newPath)) {
+                if (oldHashes.hasOwnProperty(newHash)) {
+                    var oldPath = oldHashes[newHash];
+                    diff.movedFiles.push({
+                        was: oldPath,
+                        is: newPath
+                    });
+                }
+                else {
+                    diff.addedFiles.push(newPath);
+                }
             }
         }
         resultCallback(diff);
