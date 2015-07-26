@@ -32,8 +32,8 @@ function compare(resultCallback) {
         var diff = {
             addedFiles: [],
             changedFiles: [],
-            duplicatedFiles: [],
             movedFiles: [],
+            copiedFiles: [],
             removedFiles: [],
             same: null
         };
@@ -48,7 +48,13 @@ function compare(resultCallback) {
             var oldHash = oldFiles[oldPath];
             var pathRemoved = !newFiles.hasOwnProperty(oldPath);
             var contentRemoved = !newHashes.hasOwnProperty(oldHash);
+            var hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
+            var hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
             if (pathRemoved && contentRemoved) {
+                diff.removedFiles.push(oldPath);
+                break;
+            }
+            if (pathRemoved && !contentRemoved && (!hashOccursOnceInOldFiles || !hashOccursOnceInNewFiles)) {
                 diff.removedFiles.push(oldPath);
             }
         }
@@ -59,17 +65,19 @@ function compare(resultCallback) {
             var contentsAreNew = !oldHashes.hasOwnProperty(newHash);
             var hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             var hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
-            if (pathIsNew && !contentsAreNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            if (pathIsNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
                 var oldPath = oldHashes[newHash];
-                diff.movedFiles.push({
-                    was: oldPath,
-                    is: newPath
-                });
+                diff.movedFiles.push({ was: oldPath, is: newPath });
+                break;
             }
-            if (pathIsNew && !contentsAreNew && !hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            if (pathIsNew && !contentsAreNew && !hashOccursOnceInNewFiles) {
+                var originalPaths = Object.keys(oldFiles).filter(function (path) { return oldFiles[path] === newHash; });
+                diff.copiedFiles.push({ was: originalPaths, is: newPath });
+                break;
             }
             if (pathIsNew && contentsAreNew) {
                 diff.addedFiles.push(newPath);
+                break;
             }
             if (!pathIsNew && contentsAreNew) {
                 diff.changedFiles.push(newPath);

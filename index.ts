@@ -80,13 +80,21 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             const oldHash = oldFiles[oldPath];
             const pathRemoved = !newFiles.hasOwnProperty(oldPath);
             const contentRemoved = !newHashes.hasOwnProperty(oldHash);
+            const hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
+            const hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
+
             if (pathRemoved && contentRemoved) {
+                diff.removedFiles.push(oldPath);
+                break;
+            }
+            
+            if (pathRemoved && !contentRemoved && (!hashOccursOnceInOldFiles || !hashOccursOnceInNewFiles)) {
                 diff.removedFiles.push(oldPath);
             }
         }
         
         for (const newPath of Object.keys(newFiles)) {
-            const newHash = newFiles[newPath];
+            var newHash = newFiles[newPath];
             const pathIsNew = !oldFiles.hasOwnProperty(newPath);
             const contentsAreNew = !oldHashes.hasOwnProperty(newHash);
             const hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
@@ -94,16 +102,19 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
 
             if (pathIsNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
                 const oldPath = oldHashes[newHash];
-                diff.movedFiles.push({
-                    was: oldPath,
-                    is: newPath
-                });
+                diff.movedFiles.push({ was: oldPath, is: newPath });
+                break;
             }
 
-
+            if (pathIsNew && !contentsAreNew && !hashOccursOnceInNewFiles) {
+                const originalPaths = Object.keys(oldFiles).filter(path => oldFiles[path] === newHash);
+                diff.copiedFiles.push({ was: originalPaths, is: newPath });
+                break;
+            }
 
             if (pathIsNew && contentsAreNew) {
                 diff.addedFiles.push(newPath);
+                break;
             }
 
             if (!pathIsNew && contentsAreNew) {

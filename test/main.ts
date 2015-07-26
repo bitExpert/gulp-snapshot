@@ -152,7 +152,7 @@ describe('copied files', () => {
         });
     }
 
-    function addAnotherHello(path: string) {
+    function addHello(path: string) {
         return through.obj(function (file, enc, done) {
             this.push(file)
             done();
@@ -177,42 +177,42 @@ describe('copied files', () => {
             .pipe(assert.end(done));
     });
 
-    it.skip('should add a file to "removedFiles" when a copy is removed', done => {
+    it('should add a file to "removedFiles" when a copy is removed', done => {
         sourceString('hello world', '/home/copyme.txt')
             .pipe(makeCopies())
             .pipe(snapshot.take())
             .pipe(dropFiles('/home/copyme.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.removedFiles.should.eql('/home/copyme.txt');
+                diff.removedFiles[0].should.eql('/home/copyme.txt');
             }))
             .pipe(assert.end(done));
     });
 
-    it.skip('should supply all sources if a new file matches multiple originals', done => {
+    it('should supply all sources if a new file matches multiple originals', done => {
         sourceString('hello world', '/home/source-one.txt')
-            .pipe(addAnotherHello('/home/source-two.txt'))
+            .pipe(addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
-            .pipe(addAnotherHello('/home/copy.txt'))
+            .pipe(addHello('/home/copy.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.copiedFiles[0].is.should.eql('/home/copy.txt')
                 diff.copiedFiles[0].was.length.should.eql(2);
-                diff.copiedFiles[0].was.should.contain('/home/source-one.txt');
-                diff.copiedFiles[0].was.should.contain('/home/source-two.txt');
+                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
+                diff.copiedFiles[0].was.should.containEql('/home/source-two.txt');
             }))
             .pipe(assert.end(done));
     });
     
-    it.skip('should supply removed sources for a new copy', done => {
+    it('should supply removed sources for a new copy', done => {
         sourceString('hello world', '/home/source-one.txt')
-            .pipe(addAnotherHello('/home/source-two.txt'))
+            .pipe(addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
             .pipe(dropFiles('/home/source-one.txt'))
-            .pipe(addAnotherHello('/home/copy.txt'))
+            .pipe(addHello('/home/copy.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].was.should.contain('/home/source-one.txt');
+                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
             }))
             .pipe(assert.end(done));
     });
