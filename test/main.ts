@@ -1,7 +1,7 @@
 ﻿'use strict';
 import * as through from 'through2';
 import * as assert from 'stream-assert';
-import * as hasChanged from '../index';
+import * as snapshot from '../index';
 //import replace = require('gulp-replace');
 import File = require('vinyl');
 import { Transform } from 'stream';
@@ -12,7 +12,7 @@ let source = (function () {
     return function (contents: any) {
         const stream: Transform = <any>through.obj();
         stream.push(new File({
-            path: '/home/file/' + i + '.txt',
+            path: '/home/file/' + i++ + '.txt',
             contents: contents
         }));
         stream.push(null);
@@ -30,10 +30,27 @@ function contentsEqual(expected: string) {
     };
 }
 
+function changePath(to: string) {
+    return through.obj(function (file, enc, done) {
+        file.path = to;
+        this.push(file);
+        done();
+    });
+}
+
+function changeContents(to: string) {
+    return through.obj(function (file, enc, done) {
+        file.contents = new Buffer(to);
+        this.push(file);
+        done();
+    });
+}
+
 it('should not touch stream contents', done => {
     sourceString('hello world')
-        .pipe(hasChanged.snapshot())
-        .pipe(hasChanged.compare())
+        .pipe(snapshot.take())
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(_ => _))
         .pipe(assert.length(1))
         .pipe(assert.first(contentsEqual('hello world')))
         .pipe(assert.end(done));
@@ -41,8 +58,9 @@ it('should not touch stream contents', done => {
 
 it('should provide empty array to callback when states match', done => {
     sourceString('hello world')
-        .pipe(hasChanged.snapshot())
-        .pipe(hasChanged.compare(differences => {
+        .pipe(snapshot.take())
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(differences => {
             differences.length.should.eql(0);
         }))
         .pipe(assert.end(done));
@@ -50,13 +68,10 @@ it('should provide empty array to callback when states match', done => {
 
 it('should provide diff entry when path changes', done => {
     sourceString('hello world')
-        .pipe(hasChanged.snapshot())
-        .pipe(through.obj(function(file, enc, done) {
-            file.path = '/home/different/file.txt';
-            this.push(file);
-            done();
-        }))
-        .pipe(hasChanged.compare(differences => {
+        .pipe(snapshot.take())
+        .pipe(changePath('/new/file.txt'))
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(differences => {
             differences.length.should.eql(1);
         }))
         .pipe(assert.end(done));
@@ -64,14 +79,12 @@ it('should provide diff entry when path changes', done => {
 
 it('should provide diff entry when contents change', done => {
     sourceString('hello world')
-        .pipe(hasChanged.snapshot())
-        .pipe(through.obj(function (file, enc, done) {
-            file.contents = new Buffer('goodbye world');
-            this.push(file);
-            done();
-        }))
-        .pipe(hasChanged.compare(differences => {
+        .pipe(snapshot.take())
+        .pipe(changeContents('goodbye world'))
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(differences => {
             differences.length.should.eql(1);
         }))
         .pipe(assert.end(done));
 });
+
