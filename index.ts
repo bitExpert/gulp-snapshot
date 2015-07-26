@@ -122,6 +122,13 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             }
         }
 
+        diff.same = [
+            diff.addedFiles,
+            diff.changedFiles,
+            diff.copiedFiles,
+            diff.movedFiles,
+            diff.removedFiles
+        ].every(list => list.length === 0);
 
         resultCallback(diff);
         done();

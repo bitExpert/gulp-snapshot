@@ -83,6 +83,13 @@ function compare(resultCallback) {
                 diff.changedFiles.push(newPath);
             }
         }
+        diff.same = [
+            diff.addedFiles,
+            diff.changedFiles,
+            diff.copiedFiles,
+            diff.movedFiles,
+            diff.removedFiles
+        ].every(function (list) { return list.length === 0; });
         resultCallback(diff);
         done();
     });

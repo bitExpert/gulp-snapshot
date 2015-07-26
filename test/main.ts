@@ -54,7 +54,7 @@ it('should not touch stream contents', done => {
         .pipe(assert.end(done));
 });
 
-it.skip('should provide a "none" property of true when states match', done => {
+it('should provide a "none" property of true when states match', done => {
     sourceString('hello world')
         .pipe(snapshot.take())
         .pipe(snapshot.take())
