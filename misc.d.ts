@@ -20,3 +20,10 @@ declare module 'invert-hash' {
     
     export = invert;
 }
+
+declare module 'array-uniq' {
+    function unique<T>(array: T[]): T[];
+    module unique { }
+
+    export = unique;
+}

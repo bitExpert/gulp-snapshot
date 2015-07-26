@@ -12,7 +12,7 @@ export interface IStreamDifference {
     /** Files with the same contents but a changed path */
     movedFiles: { was: string, is: string }[];
     /** Files with the same contents duplicated across multiple paths in the second snapshot */
-    duplicatedFiles: { original: string, duplicates: string[] }[];
+    duplicatedFiles: { originals: string[], duplicates: string[] }[];
     /** Files with the same path but changed contents */
     changedFiles: string[];
     /** True if snapshots are identical (all change collections are empty) */
@@ -54,6 +54,10 @@ function passthrough(file: File, enc: string, done: Function) {
     done();
 }
 
+function containsOne<T>(array: T[], element: T): boolean {
+    return array.filter(v => element === v).length === 1;
+}
+
 export function compare(resultCallback: (difference: IStreamDifference) => void): NodeJS.ReadWriteStream {
     return through.obj(passthrough, <any>function flush(done: Function) {
         const diff: IStreamDifference = {
@@ -67,30 +71,48 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
 
         const oldFiles = streamStates[1];
         const newFiles = streamStates[0];
-        const oldHashes = invert<IPathsToHashes, IHashesToPaths>(oldFiles);
+        const oldHashes = invert<IPathsToHashes, IHashesToPaths>(oldFiles); //not bijective but collisions are checked before use
         const newHashes = invert<IPathsToHashes, IHashesToPaths>(newFiles);
+        const oldHashList = Object.keys(oldFiles).map(path => oldFiles[path]);
+        const newHashList = Object.keys(newFiles).map(path => newFiles[path]);
         
         for (const oldPath of Object.keys(oldFiles)) {
             const oldHash = oldFiles[oldPath];
-            if (!newFiles.hasOwnProperty(oldPath) && !newHashes.hasOwnProperty(oldHash)) {
+            const pathRemoved = !newFiles.hasOwnProperty(oldPath);
+            const contentRemoved = !newHashes.hasOwnProperty(oldHash);
+            if (pathRemoved && contentRemoved) {
                 diff.removedFiles.push(oldPath);
             }
         }
         
         for (const newPath of Object.keys(newFiles)) {
             const newHash = newFiles[newPath];
-            if (!oldFiles.hasOwnProperty(newPath)) {
-                if (oldHashes.hasOwnProperty(newHash)) {
-                    const oldPath = oldHashes[newHash];
-                    diff.movedFiles.push({
-                        was: oldPath,
-                        is: newPath
-                    });
-                } else {
-                    diff.addedFiles.push(newPath);
-                }
+            const pathIsNew = !oldFiles.hasOwnProperty(newPath);
+            const contentsAreNew = !oldHashes.hasOwnProperty(newHash);
+            const hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
+            const hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
+
+            if (pathIsNew && !contentsAreNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+                const oldPath = oldHashes[newHash];
+                diff.movedFiles.push({
+                    was: oldPath,
+                    is: newPath
+                });
+            }
+
+            if (pathIsNew && !contentsAreNew && !hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+
+            }
+
+            if (pathIsNew && contentsAreNew) {
+                diff.addedFiles.push(newPath);
+            }
+
+            if (!pathIsNew && contentsAreNew) {
+                diff.changedFiles.push(newPath);
             }
         }
+
 
         resultCallback(diff);
         done();

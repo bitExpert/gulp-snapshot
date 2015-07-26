@@ -24,6 +24,9 @@ function passthrough(file, enc, done) {
     this.push(file);
     done();
 }
+function containsOne(array, element) {
+    return array.filter(function (v) { return element === v; }).length === 1;
+}
 function compare(resultCallback) {
     return through.obj(passthrough, function flush(done) {
         var diff = {
@@ -36,29 +39,40 @@ function compare(resultCallback) {
         };
         var oldFiles = streamStates[1];
         var newFiles = streamStates[0];
-        var oldHashes = invert(oldFiles);
+        var oldHashes = invert(oldFiles); //not bijective but collisions are checked before use
         var newHashes = invert(newFiles);
+        var oldHashList = Object.keys(oldFiles).map(function (path) { return oldFiles[path]; });
+        var newHashList = Object.keys(newFiles).map(function (path) { return newFiles[path]; });
         for (var _i = 0, _a = Object.keys(oldFiles); _i < _a.length; _i++) {
             var oldPath = _a[_i];
             var oldHash = oldFiles[oldPath];
-            if (!newFiles.hasOwnProperty(oldPath) && !newHashes.hasOwnProperty(oldHash)) {
+            var pathRemoved = !newFiles.hasOwnProperty(oldPath);
+            var contentRemoved = !newHashes.hasOwnProperty(oldHash);
+            if (pathRemoved && contentRemoved) {
                 diff.removedFiles.push(oldPath);
             }
         }
         for (var _b = 0, _c = Object.keys(newFiles); _b < _c.length; _b++) {
             var newPath = _c[_b];
             var newHash = newFiles[newPath];
-            if (!oldFiles.hasOwnProperty(newPath)) {
-                if (oldHashes.hasOwnProperty(newHash)) {
-                    var oldPath = oldHashes[newHash];
-                    diff.movedFiles.push({
-                        was: oldPath,
-                        is: newPath
-                    });
-                }
-                else {
-                    diff.addedFiles.push(newPath);
-                }
+            var pathIsNew = !oldFiles.hasOwnProperty(newPath);
+            var contentsAreNew = !oldHashes.hasOwnProperty(newHash);
+            var hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
+            var hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
+            if (pathIsNew && !contentsAreNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+                var oldPath = oldHashes[newHash];
+                diff.movedFiles.push({
+                    was: oldPath,
+                    is: newPath
+                });
+            }
+            if (pathIsNew && !contentsAreNew && !hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            }
+            if (pathIsNew && contentsAreNew) {
+                diff.addedFiles.push(newPath);
+            }
+            if (!pathIsNew && contentsAreNew) {
+                diff.changedFiles.push(newPath);
             }
         }
         resultCallback(diff);

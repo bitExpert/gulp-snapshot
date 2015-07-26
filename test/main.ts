@@ -133,3 +133,52 @@ it('should add a file to "removedFiles" when a file is removed from second snaps
         .pipe(assert.end(done));
 });
 
+it('should add a file to "duplicatedFiles" when a file is copied', done => {
+    function insertOneCopy(path: string) {
+        return through.obj(function (file, enc, done) {
+            this.push(file);
+            this.push(new File({
+                path: path,
+                contents: file.contents
+            }));
+            done();
+        });
+    }
+
+    function makeTwoCopies(firstPath: string, secondPath: string) {
+        let contents: any;
+        return through.obj(function (file, enc, done) {
+            this.push(file);
+            contents = file.contents;
+            done();
+        }, <any>function (done: Function) {
+            this.push(new File({
+                path: firstPath,
+                contents: contents
+            }));
+            this.push(new File({
+                path: secondPath,
+                contents: contents
+            }));
+            done();
+        });
+    }
+
+    sourceString('hello world', '/home/original.txt')
+        .pipe(insertOneCopy('/home/also-original.txt'))
+        .pipe(snapshot.take())
+        .pipe(makeTwoCopies('/home/copies/copy-one.txt', '/home/copies/copy-two.txt'))
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(diff => {
+            //console.log(require('util').inspect(diff));
+            diff.duplicatedFiles.length.should.eql(1);
+            const dupes = diff.duplicatedFiles[0];
+            dupes.originals.should.contain('/home/original.txt');
+            dupes.originals.should.contain('/home/also-original.txt');
+            dupes.originals.length.should.eql(2);
+            dupes.duplicates.should.contain('/home/copies/copy-one.txt');
+            dupes.duplicates.should.contain('/home/copies/copy-two.txt');
+            dupes.duplicates.length.should.eql(2);
+        }))
+        .pipe(assert.end(done));
+});
