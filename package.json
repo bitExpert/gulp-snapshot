@@ -19,6 +19,7 @@
   "author": "justin.bay@gmail.com",
   "license": "MIT",
   "dependencies": {
+    "invert-hash": "0.0.0",
     "through2": "^2.0.0"
   },
   "repository": {

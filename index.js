@@ -1,44 +1,63 @@
 'use strict';
 var through = require('through2');
 var crypto = require('crypto');
+var invert = require('invert-hash');
 var streamStates = [];
-function reset() {
-    streamStates = [];
-}
-exports.reset = reset;
 function take() {
-    var streamState = [];
+    var streamState = {};
     streamStates.unshift(streamState);
     if (streamStates.length > 2) {
         streamStates.length = 2;
     }
-    return through.obj(function (file, enc, done) {
+    return through.obj(function store(file, enc, done) {
         var hash = crypto
             .createHash('sha1')
             .update(file.contents) //TODO support stream contents
             .digest('hex');
-        streamState.push({
-            hash: hash,
-            path: file.path
-        });
+        streamState[file.path] = hash;
         this.push(file);
         done();
     });
 }
 exports.take = take;
+function passthrough(file, enc, done) {
+    this.push(file);
+    done();
+}
 function compare(resultCallback) {
-    return through.obj(function (file, enc, done) {
-        this.push(file);
-        done();
-    }, function (done) {
-        var newer = streamStates[0][0];
-        var older = streamStates[1][0];
-        var result = [];
-        if (newer.hash !== older.hash || newer.path !== older.path) {
-            result = ['something'];
+    return through.obj(passthrough, function flush(done) {
+        var diff = {
+            addedFiles: [],
+            changedFiles: [],
+            duplicatedFiles: [],
+            movedFiles: [],
+            removedFiles: [],
+            same: null
+        };
+        var oldFiles = streamStates[1];
+        var newFiles = streamStates[0];
+        var oldHashes = invert(oldFiles);
+        var newHashes = invert(newFiles);
+        for (var _i = 0, _a = Object.keys(oldFiles); _i < _a.length; _i++) {
+            var oldPath = _a[_i];
         }
-        resultCallback(result);
+        for (var _b = 0, _c = Object.keys(newFiles); _b < _c.length; _b++) {
+            var newPath = _c[_b];
+            var newHash = newFiles[newPath];
+            if (!oldFiles.hasOwnProperty(newPath) && oldHashes.hasOwnProperty(newHash)) {
+                var oldPath = oldHashes[newHash];
+                diff.movedFiles.push({
+                    was: oldPath,
+                    now: newPath
+                });
+            }
+        }
+        resultCallback(diff);
         done();
     });
 }
 exports.compare = compare;
+function reset() {
+    streamStates = [];
+}
+exports.reset = reset;

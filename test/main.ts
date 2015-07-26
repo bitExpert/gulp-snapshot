@@ -56,34 +56,25 @@ it('should not touch stream contents', done => {
         .pipe(assert.end(done));
 });
 
-it('should provide empty array to callback when states match', done => {
+it.skip('should provide a "none" property of true when states match', done => {
     sourceString('hello world')
         .pipe(snapshot.take())
         .pipe(snapshot.take())
-        .pipe(snapshot.compare(differences => {
-            differences.length.should.eql(0);
+        .pipe(snapshot.compare(diff => {
+            diff.same.should.eql(true);
         }))
         .pipe(assert.end(done));
 });
 
-it('should provide diff entry when path changes', done => {
+it('should add a file to "moved" collection when path changes', done => {
     sourceString('hello world')
+        .pipe(changePath('/old/file.txt'))
         .pipe(snapshot.take())
         .pipe(changePath('/new/file.txt'))
         .pipe(snapshot.take())
-        .pipe(snapshot.compare(differences => {
-            differences.length.should.eql(1);
-        }))
-        .pipe(assert.end(done));
-});
-
-it('should provide diff entry when contents change', done => {
-    sourceString('hello world')
-        .pipe(snapshot.take())
-        .pipe(changeContents('goodbye world'))
-        .pipe(snapshot.take())
-        .pipe(snapshot.compare(differences => {
-            differences.length.should.eql(1);
+        .pipe(snapshot.compare(diff => {
+            diff.movedFiles[0].was.should.eql('/old/file.txt');
+            diff.movedFiles[0].is.should.eql('/new/file.txt');
         }))
         .pipe(assert.end(done));
 });

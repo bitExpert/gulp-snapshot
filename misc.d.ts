@@ -13,3 +13,10 @@ declare module 'stream-assert' {
     var _: streamAssert;
     export = _;
 }
+
+declare module 'invert-hash' {
+    function invert<A, B>(object: A): B;
+    module invert { }
+    
+    export = invert;
+}
