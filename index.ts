@@ -9,10 +9,10 @@ export interface IStreamDifference {
     addedFiles: string[];
     /** Files present in the first snapshot are aren't in the second */
     removedFiles: string[];
-    /** Files with the same contents but a changed path */
+    /** Files with the same unique contents but a changed path */
     movedFiles: { was: string, is: string }[];
-    /** Files with the same contents duplicated across multiple paths in the second snapshot */
-    duplicatedFiles: { originals: string[], duplicates: string[] }[];
+    /** Files with the same non-unique contents given a new path */
+    copiedFiles: { was: string[], is: string }[];
     /** Files with the same path but changed contents */
     changedFiles: string[];
     /** True if snapshots are identical (all change collections are empty) */
@@ -63,8 +63,8 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
         const diff: IStreamDifference = {
             addedFiles: [],
             changedFiles: [],
-            duplicatedFiles: [],
             movedFiles: [],
+            copiedFiles: [],
             removedFiles: [],
             same: null
         };
@@ -92,7 +92,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             const hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             const hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
 
-            if (pathIsNew && !contentsAreNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            if (pathIsNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
                 const oldPath = oldHashes[newHash];
                 diff.movedFiles.push({
                     was: oldPath,
@@ -100,9 +100,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
                 });
             }
 
-            if (pathIsNew && !contentsAreNew && !hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
 
-            }
 
             if (pathIsNew && contentsAreNew) {
                 diff.addedFiles.push(newPath);

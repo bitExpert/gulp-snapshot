@@ -32,6 +32,18 @@ function contentsEqual(expected: string) {
     };
 }
 
+function dropFiles(withPath?: string) {
+    return through.obj(function (file, enc, done) {
+        if (withPath) {
+            if (file.path === withPath) {
+                return done();
+            }
+            this.push(file);
+        }
+        done();
+    });
+}
+
 it('should not touch stream contents', done => {
     sourceString('hello world')
         .pipe(snapshot.take())
@@ -52,7 +64,7 @@ it.skip('should provide a "none" property of true when states match', done => {
         .pipe(assert.end(done));
 });
 
-it('should add a file to "movedFiles" collection when path changes and contents do not', done => {
+it('should add a file to "renamedFiles" collection when path changes and contents do not', done => {
     function changePath(to: string) {
         return through.obj(function (file, enc, done) {
             file.path = to;
@@ -117,12 +129,6 @@ it('should add a file to "addedFiles" when new file is present in second snapsho
 });
 
 it('should add a file to "removedFiles" when a file is removed from second snapshot', done => {
-    function dropFiles() {
-        return through.obj(function (file, enc, done) {
-            done();
-        });
-    }
-
     sourceString('hello world', '/home/deleteme.txt')
         .pipe(snapshot.take())
         .pipe(dropFiles())
@@ -133,52 +139,81 @@ it('should add a file to "removedFiles" when a file is removed from second snaps
         .pipe(assert.end(done));
 });
 
-it('should add a file to "duplicatedFiles" when a file is copied', done => {
-    function insertOneCopy(path: string) {
-        return through.obj(function (file, enc, done) {
+
+describe('copied files', () => {
+    function makeCopies() {
+        return through.obj(function (file: File, enc: string, done: Function) {
             this.push(file);
             this.push(new File({
-                path: path,
+                path: file.path.replace('.', '-Copy.'),
                 contents: file.contents
             }));
             done();
         });
     }
 
-    function makeTwoCopies(firstPath: string, secondPath: string) {
-        let contents: any;
+    function addAnotherHello(path: string) {
         return through.obj(function (file, enc, done) {
-            this.push(file);
-            contents = file.contents;
+            this.push(file)
             done();
         }, <any>function (done: Function) {
             this.push(new File({
-                path: firstPath,
-                contents: contents
-            }));
-            this.push(new File({
-                path: secondPath,
-                contents: contents
+                contents: new Buffer('hello world'),
+                path: path
             }));
             done();
         });
     }
 
-    sourceString('hello world', '/home/original.txt')
-        .pipe(insertOneCopy('/home/also-original.txt'))
-        .pipe(snapshot.take())
-        .pipe(makeTwoCopies('/home/copies/copy-one.txt', '/home/copies/copy-two.txt'))
-        .pipe(snapshot.take())
-        .pipe(snapshot.compare(diff => {
-            //console.log(require('util').inspect(diff));
-            diff.duplicatedFiles.length.should.eql(1);
-            const dupes = diff.duplicatedFiles[0];
-            dupes.originals.should.contain('/home/original.txt');
-            dupes.originals.should.contain('/home/also-original.txt');
-            dupes.originals.length.should.eql(2);
-            dupes.duplicates.should.contain('/home/copies/copy-one.txt');
-            dupes.duplicates.should.contain('/home/copies/copy-two.txt');
-            dupes.duplicates.length.should.eql(2);
-        }))
-        .pipe(assert.end(done));
+    it('should add a file to "copiedFiles" when a file is copied', done => {
+        sourceString('hello world', '/home/copyme.txt')
+            .pipe(snapshot.take())
+            .pipe(makeCopies())
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.copiedFiles[0].was[0].should.eql('/home/copyme.txt');
+                diff.copiedFiles[0].is.should.eql('/home/copyme-Copy.txt');
+            }))
+            .pipe(assert.end(done));
+    });
+
+    it.skip('should add a file to "removedFiles" when a copy is removed', done => {
+        sourceString('hello world', '/home/copyme.txt')
+            .pipe(makeCopies())
+            .pipe(snapshot.take())
+            .pipe(dropFiles('/home/copyme.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.removedFiles.should.eql('/home/copyme.txt');
+            }))
+            .pipe(assert.end(done));
+    });
+
+    it.skip('should supply all sources if a new file matches multiple originals', done => {
+        sourceString('hello world', '/home/source-one.txt')
+            .pipe(addAnotherHello('/home/source-two.txt'))
+            .pipe(snapshot.take())
+            .pipe(addAnotherHello('/home/copy.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.copiedFiles[0].is.should.eql('/home/copy.txt')
+                diff.copiedFiles[0].was.length.should.eql(2);
+                diff.copiedFiles[0].was.should.contain('/home/source-one.txt');
+                diff.copiedFiles[0].was.should.contain('/home/source-two.txt');
+            }))
+            .pipe(assert.end(done));
+    });
+    
+    it.skip('should supply removed sources for a new copy', done => {
+        sourceString('hello world', '/home/source-one.txt')
+            .pipe(addAnotherHello('/home/source-two.txt'))
+            .pipe(snapshot.take())
+            .pipe(dropFiles('/home/source-one.txt'))
+            .pipe(addAnotherHello('/home/copy.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.copiedFiles[0].was.should.contain('/home/source-one.txt');
+            }))
+            .pipe(assert.end(done));
+    });
 });
