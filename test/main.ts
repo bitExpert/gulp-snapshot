@@ -2,29 +2,10 @@
 import * as through from 'through2';
 import * as assert from 'stream-assert';
 import * as snapshot from '../index';
-//import replace = require('gulp-replace');
+import * as mut from './mutators';
+import { sourceBuffer, sourceStream } from './sources';
 import File = require('vinyl');
-import { Transform } from 'stream';
 import 'should';
-
-const uniquePath = (function () {
-    let i = 0;
-    return () => '/home/file/' + i++ + '.txt';
-})();
-
-function source(contents: any, path = uniquePath()) {
-    const stream: Transform = <any>through.obj();
-    stream.push(new File({
-        path: path,
-        contents: contents
-    }));
-    stream.push(null);
-    return stream;
-}
-
-function sourceString(contents: string, path?: string) {
-    return source(new Buffer(contents), path);
-}
 
 function contentsEqual(expected: string) {
     return function (file: File) {
@@ -32,20 +13,8 @@ function contentsEqual(expected: string) {
     };
 }
 
-function dropFiles(withPath?: string) {
-    return through.obj(function (file, enc, done) {
-        if (withPath) {
-            if (file.path === withPath) {
-                return done();
-            }
-            this.push(file);
-        }
-        done();
-    });
-}
-
 it('should not touch stream contents', done => {
-    sourceString('hello world')
+    sourceBuffer('hello world')
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(_ => _))
@@ -54,8 +23,8 @@ it('should not touch stream contents', done => {
         .pipe(assert.end(done));
 });
 
-it('should provide a "none" property of true when states match', done => {
-    sourceString('hello world')
+it('should provide a "same" property of true when states match', done => {
+    sourceBuffer('hello world')
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
@@ -64,19 +33,11 @@ it('should provide a "none" property of true when states match', done => {
         .pipe(assert.end(done));
 });
 
-it('should add a file to "renamedFiles" collection when path changes and contents do not', done => {
-    function changePath(to: string) {
-        return through.obj(function (file, enc, done) {
-            file.path = to;
-            this.push(file);
-            done();
-        });
-    }
-
-    sourceString('hello world')
-        .pipe(changePath('/old/file.txt'))
+it('should add a file to "movedFiles" collection when path changes and contents do not', done => {
+    sourceBuffer('hello world')
+        .pipe(mut.changePath('/old/file.txt'))
         .pipe(snapshot.take())
-        .pipe(changePath('/new/file.txt'))
+        .pipe(mut.changePath('/new/file.txt'))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
             diff.movedFiles[0].was.should.eql('/old/file.txt');
@@ -86,17 +47,9 @@ it('should add a file to "renamedFiles" collection when path changes and content
 });
 
 it('should add a file to "changedFiles" when contents change and path does not', done => {
-    function changeContents(to: string) {
-        return through.obj(function (file, enc, done) {
-            file.contents = new Buffer(to);
-            this.push(file);
-            done();
-        });
-    }
-
-    sourceString('hello world', '/home/changeme.txt')
+    sourceBuffer('hello world', '/home/changeme.txt')
         .pipe(snapshot.take())
-        .pipe(changeContents('goodbye world'))
+        .pipe(mut.changeBufferContents('goodbye world'))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
             diff.changedFiles[0].should.eql('/home/changeme.txt');
@@ -105,22 +58,9 @@ it('should add a file to "changedFiles" when contents change and path does not',
 });
 
 it('should add a file to "addedFiles" when new file is present in second snapshot', done => {
-    function insertFile(contents: string, path: string) {
-        return through.obj(function (file, enc, done) {
-            this.push(file);
-            done();
-        }, <any>function (done: Function) {
-            this.push(new File({
-                path: path,
-                contents: new Buffer(contents)
-            }));
-            done();
-        });
-    }
-
-    sourceString('hello world')
+    sourceBuffer('hello world')
         .pipe(snapshot.take())
-        .pipe(insertFile('new file', '/home/new.txt'))
+        .pipe(mut.insertFile('new file', '/home/new.txt'))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
             diff.addedFiles[0].should.eql('/home/new.txt');
@@ -129,9 +69,9 @@ it('should add a file to "addedFiles" when new file is present in second snapsho
 });
 
 it('should add a file to "removedFiles" when a file is removed from second snapshot', done => {
-    sourceString('hello world', '/home/deleteme.txt')
+    sourceBuffer('hello world', '/home/deleteme.txt')
         .pipe(snapshot.take())
-        .pipe(dropFiles())
+        .pipe(mut.dropFiles())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
             diff.removedFiles[0].should.eql('/home/deleteme.txt');
@@ -139,36 +79,34 @@ it('should add a file to "removedFiles" when a file is removed from second snaps
         .pipe(assert.end(done));
 });
 
+describe('streamed files', () => {
+    it('should detect matching states', done => {
+        sourceStream(['hello ', 'world', '!'])
+            .pipe(snapshot.take())
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.same.should.eql(true);
+            }))
+            .pipe(assert.end(done));
+    });
+
+    it('should detect changes', done => {
+        sourceStream(['hello', 'world', '!'], '/home/stream.txt')
+            .pipe(snapshot.take())
+            .pipe(mut.changeStreamContents(['goodbye ', 'stream']))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                diff.changedFiles[0].should.eql('/home/stream.txt');
+            }))
+            .pipe(assert.end(done));
+    });
+});
 
 describe('copied files', () => {
-    function makeCopies() {
-        return through.obj(function (file: File, enc: string, done: Function) {
-            this.push(file);
-            this.push(new File({
-                path: file.path.replace('.', '-Copy.'),
-                contents: file.contents
-            }));
-            done();
-        });
-    }
-
-    function addHello(path: string) {
-        return through.obj(function (file, enc, done) {
-            this.push(file)
-            done();
-        }, <any>function (done: Function) {
-            this.push(new File({
-                contents: new Buffer('hello world'),
-                path: path
-            }));
-            done();
-        });
-    }
-
     it('should add a file to "copiedFiles" when a file is copied', done => {
-        sourceString('hello world', '/home/copyme.txt')
+        sourceBuffer('hello world', '/home/copyme.txt')
             .pipe(snapshot.take())
-            .pipe(makeCopies())
+            .pipe(mut.makeCopies())
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.copiedFiles[0].was[0].should.eql('/home/copyme.txt');
@@ -178,10 +116,10 @@ describe('copied files', () => {
     });
 
     it('should add a file to "removedFiles" when a copy is removed', done => {
-        sourceString('hello world', '/home/copyme.txt')
-            .pipe(makeCopies())
+        sourceBuffer('hello world', '/home/copyme.txt')
+            .pipe(mut.makeCopies())
             .pipe(snapshot.take())
-            .pipe(dropFiles('/home/copyme.txt'))
+            .pipe(mut.dropFiles('/home/copyme.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.removedFiles[0].should.eql('/home/copyme.txt');
@@ -190,10 +128,10 @@ describe('copied files', () => {
     });
 
     it('should supply all sources if a new file matches multiple originals', done => {
-        sourceString('hello world', '/home/source-one.txt')
-            .pipe(addHello('/home/source-two.txt'))
+        sourceBuffer('hello world', '/home/source-one.txt')
+            .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
-            .pipe(addHello('/home/copy.txt'))
+            .pipe(mut.addHello('/home/copy.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.copiedFiles[0].is.should.eql('/home/copy.txt')
@@ -205,11 +143,11 @@ describe('copied files', () => {
     });
     
     it('should supply removed sources for a new copy', done => {
-        sourceString('hello world', '/home/source-one.txt')
-            .pipe(addHello('/home/source-two.txt'))
+        sourceBuffer('hello world', '/home/source-one.txt')
+            .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
-            .pipe(dropFiles('/home/source-one.txt'))
-            .pipe(addHello('/home/copy.txt'))
+            .pipe(mut.dropFiles('/home/source-one.txt'))
+            .pipe(mut.addHello('/home/copy.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
@@ -218,11 +156,11 @@ describe('copied files', () => {
     });
 
     it('should mark as copy if all sources are dropped', done => {
-        sourceString('hello world', '/home/source-one.txt')
-            .pipe(addHello('/home/source-two.txt'))
+        sourceBuffer('hello world', '/home/source-one.txt')
+            .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
-            .pipe(dropFiles())
-            .pipe(addHello('/home/copy.txt'))
+            .pipe(mut.dropFiles())
+            .pipe(mut.addHello('/home/copy.txt'))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
                 diff.copiedFiles[0].is.should.eql('/home/copy.txt');

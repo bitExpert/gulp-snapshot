@@ -9,6 +9,8 @@
   "files": [
     "index.ts",
     "test/main.ts",
+    "test/mutators.ts",
+    "test/sources.ts",
     "misc.d.ts",
     "typings/tsd.d.ts"
   ]

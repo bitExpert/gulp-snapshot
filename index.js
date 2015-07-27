@@ -9,14 +9,29 @@ function take() {
     if (streamStates.length > 2) {
         streamStates.length = 2;
     }
-    return through.obj(function store(file, enc, done) {
-        var hash = crypto
-            .createHash('sha1')
-            .update(file.contents) //TODO support stream contents
-            .digest('hex');
-        streamState[file.path] = hash;
-        this.push(file);
-        done();
+    return through.obj(function store(file, enc, fileDone) {
+        if (file.isNull()) {
+            this.push(file);
+            return fileDone();
+        }
+        var hash = crypto.createHash('sha1');
+        if (file.isBuffer()) {
+            streamState[file.path] = hash.update(file.contents).digest('hex');
+            this.push(file);
+            return fileDone();
+        }
+        if (file.isStream()) {
+            file.pipe(through(function (chunk, enc, chunkDone) {
+                hash.update(chunk, enc);
+                this.push(chunk);
+                chunkDone();
+            }, function (contentsDone) {
+                streamState[file.path] = hash.digest('hex');
+                contentsDone();
+                fileDone();
+            }));
+            this.push(file);
+        }
     });
 }
 exports.take = take;
@@ -83,13 +98,12 @@ function compare(resultCallback) {
                 diff.changedFiles.push(newPath);
             }
         }
-        diff.same = [
-            diff.addedFiles,
-            diff.changedFiles,
-            diff.copiedFiles,
-            diff.movedFiles,
-            diff.removedFiles
-        ].every(function (list) { return list.length === 0; });
+        diff.same =
+            diff.addedFiles.length === 0 &&
+                diff.changedFiles.length === 0 &&
+                diff.copiedFiles.length === 0 &&
+                diff.movedFiles.length === 0 &&
+                diff.removedFiles.length === 0;
         resultCallback(diff);
         done();
     });

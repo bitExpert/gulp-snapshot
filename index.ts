@@ -36,16 +36,32 @@ export function take() {
         streamStates.length = 2;
     }
 
-    return through.obj(function store(file: File, enc: string, done: Function) {
-        const hash = crypto
-            .createHash('sha1')
-            .update(file.contents) //TODO support stream contents
-            .digest('hex');
+    return through.obj(function store(file: File, enc: string, fileDone: Function) {
+        if (file.isNull()) {
+            this.push(file);
+            return fileDone();
+        }
 
-        streamState[file.path] = hash;
+        const hash = crypto.createHash('sha1');
 
-        this.push(file);
-        done();
+        if (file.isBuffer()) {
+            streamState[file.path] = hash.update(file.contents).digest('hex');
+            this.push(file);
+            return fileDone();
+        }
+
+        if (file.isStream()) {
+            file.pipe(through(function (chunk, enc, chunkDone) {
+                hash.update(chunk, enc);
+                this.push(chunk);
+                chunkDone();
+            }, <any>function (contentsDone: Function) {
+                streamState[file.path] = hash.digest('hex');
+                contentsDone();
+                fileDone();
+            }));
+            this.push(file);
+        }
     });
 }
 
@@ -122,13 +138,12 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             }
         }
 
-        diff.same = [
-            diff.addedFiles,
-            diff.changedFiles,
-            diff.copiedFiles,
-            diff.movedFiles,
-            diff.removedFiles
-        ].every(list => list.length === 0);
+        diff.same =
+            diff.addedFiles.length === 0 &&
+            diff.changedFiles.length === 0 &&
+            diff.copiedFiles.length === 0 &&
+            diff.movedFiles.length === 0 &&
+            diff.removedFiles.length === 0
 
         resultCallback(diff);
         done();
