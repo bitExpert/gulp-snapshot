@@ -1,5 +1,5 @@
 {
-  "name": "gulp-compare-stream",
+  "name": "gulp-snapshot",
   "version": "0.0.1",
   "description": "Take and compare hash-based snapshots of Gulp stream states",
   "main": "index.js",

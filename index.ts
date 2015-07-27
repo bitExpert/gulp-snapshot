@@ -85,19 +85,19 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             same: null
         };
 
-        const oldFilesToHashes = streamStates[1];
-        const newFilesToHashes = streamStates[0];
-        const oldHashesToFiles = invert<IPathsToHashes, IHashesToPaths>(oldFilesToHashes); //not bijective but collisions are checked before use
-        const newHashesToFiles = invert<IPathsToHashes, IHashesToPaths>(newFilesToHashes);
-        const oldPathList = Object.keys(oldFilesToHashes);
-        const newPathList = Object.keys(newFilesToHashes);
-        const oldHashList = oldPathList.map(path => oldFilesToHashes[path]);
-        const newHashList = newPathList.map(path => newFilesToHashes[path]);
+        const oldPathsToHashes = streamStates[1];
+        const newPathsToHashes = streamStates[0];
+        const oldHashesToPaths = invert<IPathsToHashes, IHashesToPaths>(oldPathsToHashes); //not bijective but collisions are checked before use
+        const newHashesToPaths = invert<IPathsToHashes, IHashesToPaths>(newPathsToHashes);
+        const oldPathList = Object.keys(oldPathsToHashes);
+        const newPathList = Object.keys(newPathsToHashes);
+        const oldHashList = oldPathList.map(path => oldPathsToHashes[path]);
+        const newHashList = newPathList.map(path => newPathsToHashes[path]);
         
         for (const oldPath of oldPathList) {
-            const oldHash = oldFilesToHashes[oldPath];
-            const pathRemoved = !newFilesToHashes.hasOwnProperty(oldPath);
-            const contentRemoved = !newHashesToFiles.hasOwnProperty(oldHash);
+            const oldHash = oldPathsToHashes[oldPath];
+            const pathRemoved = !newPathsToHashes.hasOwnProperty(oldPath);
+            const contentRemoved = !newHashesToPaths.hasOwnProperty(oldHash);
             const hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
             const hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
             const isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
@@ -113,21 +113,21 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
         }
         
         for (const newPath of newPathList) {
-            var newHash = newFilesToHashes[newPath];
-            const pathIsNew = !oldFilesToHashes.hasOwnProperty(newPath);
-            const contentsAreNew = !oldHashesToFiles.hasOwnProperty(newHash);
+            var newHash = newPathsToHashes[newPath];
+            const pathIsNew = !oldPathsToHashes.hasOwnProperty(newPath);
+            const contentsAreNew = !oldHashesToPaths.hasOwnProperty(newHash);
             const hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             const hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
             const isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
 
             if (pathIsNew && isOneToOneMove) {
-                const oldPath = oldHashesToFiles[newHash];
+                const oldPath = oldHashesToPaths[newHash];
                 diff.movedFiles.push({ was: oldPath, is: newPath });
                 break;
             }
             
             if (pathIsNew && !contentsAreNew && !isOneToOneMove) {
-                const originalPaths = oldPathList.filter(path => oldFilesToHashes[path] === newHash);
+                const originalPaths = oldPathList.filter(path => oldPathsToHashes[path] === newHash);
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;
             }
