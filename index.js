@@ -52,17 +52,19 @@ function compare(resultCallback) {
             removedFiles: [],
             same: null
         };
-        var oldFiles = streamStates[1];
-        var newFiles = streamStates[0];
-        var oldHashes = invert(oldFiles); //not bijective but collisions are checked before use
-        var newHashes = invert(newFiles);
-        var oldHashList = Object.keys(oldFiles).map(function (path) { return oldFiles[path]; });
-        var newHashList = Object.keys(newFiles).map(function (path) { return newFiles[path]; });
-        for (var _i = 0, _a = Object.keys(oldFiles); _i < _a.length; _i++) {
-            var oldPath = _a[_i];
-            var oldHash = oldFiles[oldPath];
-            var pathRemoved = !newFiles.hasOwnProperty(oldPath);
-            var contentRemoved = !newHashes.hasOwnProperty(oldHash);
+        var oldFilesToHashes = streamStates[1];
+        var newFilesToHashes = streamStates[0];
+        var oldHashesToFiles = invert(oldFilesToHashes); //not bijective but collisions are checked before use
+        var newHashesToFiles = invert(newFilesToHashes);
+        var oldPathList = Object.keys(oldFilesToHashes);
+        var newPathList = Object.keys(newFilesToHashes);
+        var oldHashList = oldPathList.map(function (path) { return oldFilesToHashes[path]; });
+        var newHashList = newPathList.map(function (path) { return newFilesToHashes[path]; });
+        for (var _i = 0; _i < oldPathList.length; _i++) {
+            var oldPath = oldPathList[_i];
+            var oldHash = oldFilesToHashes[oldPath];
+            var pathRemoved = !newFilesToHashes.hasOwnProperty(oldPath);
+            var contentRemoved = !newHashesToFiles.hasOwnProperty(oldHash);
             var hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
             var hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
             var isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
@@ -74,21 +76,21 @@ function compare(resultCallback) {
                 diff.removedFiles.push(oldPath);
             }
         }
-        for (var _b = 0, _c = Object.keys(newFiles); _b < _c.length; _b++) {
-            var newPath = _c[_b];
-            var newHash = newFiles[newPath];
-            var pathIsNew = !oldFiles.hasOwnProperty(newPath);
-            var contentsAreNew = !oldHashes.hasOwnProperty(newHash);
+        for (var _a = 0; _a < newPathList.length; _a++) {
+            var newPath = newPathList[_a];
+            var newHash = newFilesToHashes[newPath];
+            var pathIsNew = !oldFilesToHashes.hasOwnProperty(newPath);
+            var contentsAreNew = !oldHashesToFiles.hasOwnProperty(newHash);
             var hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             var hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
             var isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
             if (pathIsNew && isOneToOneMove) {
-                var oldPath = oldHashes[newHash];
+                var oldPath = oldHashesToFiles[newHash];
                 diff.movedFiles.push({ was: oldPath, is: newPath });
                 break;
             }
             if (pathIsNew && !contentsAreNew && !isOneToOneMove) {
-                var originalPaths = Object.keys(oldFiles).filter(function (path) { return oldFiles[path] === newHash; });
+                var originalPaths = oldPathList.filter(function (path) { return oldFilesToHashes[path] === newHash; });
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;
             }
