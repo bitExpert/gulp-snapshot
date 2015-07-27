@@ -98,13 +98,14 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             const contentRemoved = !newHashes.hasOwnProperty(oldHash);
             const hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
             const hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
+            const isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
 
             if (pathRemoved && contentRemoved) {
                 diff.removedFiles.push(oldPath);
                 break;
             }
-            
-            if (pathRemoved && !contentRemoved && (!hashOccursOnceInOldFiles || !hashOccursOnceInNewFiles)) {
+
+            if (pathRemoved && !contentRemoved && !isOneToOneMove) {
                 diff.removedFiles.push(oldPath);
             }
         }
@@ -115,14 +116,15 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             const contentsAreNew = !oldHashes.hasOwnProperty(newHash);
             const hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             const hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
+            const isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
 
-            if (pathIsNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            if (pathIsNew && isOneToOneMove) {
                 const oldPath = oldHashes[newHash];
                 diff.movedFiles.push({ was: oldPath, is: newPath });
                 break;
             }
-
-            if (pathIsNew && !contentsAreNew && (!hashOccursOnceInNewFiles || !hashOccursOnceInOldFiles)) {
+            
+            if (pathIsNew && !contentsAreNew && !isOneToOneMove) {
                 const originalPaths = Object.keys(oldFiles).filter(path => oldFiles[path] === newHash);
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;

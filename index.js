@@ -65,11 +65,12 @@ function compare(resultCallback) {
             var contentRemoved = !newHashes.hasOwnProperty(oldHash);
             var hashOccursOnceInOldFiles = containsOne(oldHashList, oldHash);
             var hashOccursOnceInNewFiles = containsOne(newHashList, oldHash);
+            var isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
             if (pathRemoved && contentRemoved) {
                 diff.removedFiles.push(oldPath);
                 break;
             }
-            if (pathRemoved && !contentRemoved && (!hashOccursOnceInOldFiles || !hashOccursOnceInNewFiles)) {
+            if (pathRemoved && !contentRemoved && !isOneToOneMove) {
                 diff.removedFiles.push(oldPath);
             }
         }
@@ -80,12 +81,13 @@ function compare(resultCallback) {
             var contentsAreNew = !oldHashes.hasOwnProperty(newHash);
             var hashOccursOnceInOldFiles = containsOne(oldHashList, newHash);
             var hashOccursOnceInNewFiles = containsOne(newHashList, newHash);
-            if (pathIsNew && hashOccursOnceInOldFiles && hashOccursOnceInNewFiles) {
+            var isOneToOneMove = hashOccursOnceInOldFiles && hashOccursOnceInNewFiles;
+            if (pathIsNew && isOneToOneMove) {
                 var oldPath = oldHashes[newHash];
                 diff.movedFiles.push({ was: oldPath, is: newPath });
                 break;
             }
-            if (pathIsNew && !contentsAreNew && (!hashOccursOnceInNewFiles || !hashOccursOnceInOldFiles)) {
+            if (pathIsNew && !contentsAreNew && !isOneToOneMove) {
                 var originalPaths = Object.keys(oldFiles).filter(function (path) { return oldFiles[path] === newHash; });
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
                 break;
