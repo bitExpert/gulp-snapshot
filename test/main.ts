@@ -170,3 +170,43 @@ describe('copied files', () => {
             .pipe(assert.end(done));
     });
 });
+
+it('kitchen sink', done => {
+    sourceBuffer('hello world', '/home/hello.txt')
+        .pipe(mut.addHello('/home/hello2.txt'))
+        .pipe(mut.insertFile('delete me', '/home/goodbye.txt'))
+        .pipe(mut.insertFile('delete me too', '/home/goodbye2.txt'))
+        .pipe(mut.insertFile('do not touch', '/home/notouch.txt'))
+        .pipe(mut.insertFile('touch me', '/home/touch.txt'))
+        .pipe(mut.insertFile('touch me too', '/home/touch2.txt'))
+        .pipe(snapshot.take())
+        .pipe(mut.addHello('/home/hello3.txt'))
+        .pipe(mut.insertFile('new file contents', '/home/brand/new.txt'))
+        .pipe(mut.insertFile('new file contents two', '/home/brand/new2.txt'))
+        .pipe(mut.dropFiles('/home/hello.txt'))
+        .pipe(mut.dropFiles('/home/goodbye.txt'))
+        .pipe(mut.dropFiles('/home/goodbye2.txt'))
+        .pipe(mut.changeBufferContents('touched', '/home/touch.txt'))
+        .pipe(mut.changeBufferContents('touched two', '/home/touch2.txt'))
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(diff => {
+            diff.copiedFiles[0].is.should.eql('/home/hello3.txt');
+            diff.copiedFiles[0].was.length.should.eql(2);
+            diff.copiedFiles[0].was.should.containEql('/home/hello.txt');
+            diff.copiedFiles[0].was.should.containEql('/home/hello2.txt');
+
+            diff.addedFiles.length.should.eql(2);
+            diff.addedFiles.should.containEql('/home/brand/new.txt');
+            diff.addedFiles.should.containEql('/home/brand/new2.txt');
+
+            diff.removedFiles.length.should.eql(3);
+            diff.removedFiles.should.containEql('/home/hello.txt');
+            diff.removedFiles.should.containEql('/home/goodbye.txt');
+            diff.removedFiles.should.containEql('/home/goodbye2.txt');
+
+            diff.changedFiles.length.should.eql(2);
+            diff.changedFiles.should.containEql('/home/touch.txt');
+            diff.changedFiles.should.containEql('/home/touch2.txt');
+        }))
+        .pipe(assert.end(done));
+});

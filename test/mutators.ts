@@ -22,9 +22,11 @@ export function dropFiles(withPath?: string) {
     });
 }
 
-export function changeBufferContents(to: string) {
+export function changeBufferContents(to: string, forPath?: string) {
     return through.obj(function (file, enc, done) {
-        file.contents = new Buffer(to);
+        if (!forPath || forPath === file.path) {
+            file.contents = new Buffer(to);
+        }
         this.push(file);
         done();
     });
