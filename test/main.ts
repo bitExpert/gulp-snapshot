@@ -3,7 +3,7 @@ import * as through from 'through2';
 import * as assert from 'stream-assert';
 import * as snapshot from '../index';
 import * as mut from './mutators';
-import { sourceBuffer, sourceStream } from './sources';
+import { sourceHelloBuffer, sourceStream } from './sources';
 import File = require('vinyl');
 import * as should from 'should';
 
@@ -14,7 +14,7 @@ function contentsEqual(expected: string) {
 }
 
 it('should not touch stream contents', done => {
-    sourceBuffer('hello world')
+    sourceHelloBuffer()
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(_ => _))
@@ -24,7 +24,7 @@ it('should not touch stream contents', done => {
 });
 
 it('should provide a "same" property of true when states match', done => {
-    sourceBuffer('hello world')
+    sourceHelloBuffer()
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
@@ -34,7 +34,7 @@ it('should provide a "same" property of true when states match', done => {
 });
 
 it('should add a file to "movedFiles" collection when path changes and contents do not', done => {
-    sourceBuffer('hello world')
+    sourceHelloBuffer()
         .pipe(mut.changePath('/old/file.txt'))
         .pipe(snapshot.take())
         .pipe(mut.changePath('/new/file.txt'))
@@ -47,7 +47,7 @@ it('should add a file to "movedFiles" collection when path changes and contents 
 });
 
 it('should add a file to "changedFiles" when contents change and path does not', done => {
-    sourceBuffer('hello world', '/home/changeme.txt')
+    sourceHelloBuffer('/home/changeme.txt')
         .pipe(snapshot.take())
         .pipe(mut.changeBufferContents('goodbye world'))
         .pipe(snapshot.take())
@@ -58,7 +58,7 @@ it('should add a file to "changedFiles" when contents change and path does not',
 });
 
 it('should add a file to "addedFiles" when new file is present in second snapshot', done => {
-    sourceBuffer('hello world')
+    sourceHelloBuffer()
         .pipe(snapshot.take())
         .pipe(mut.insertFile('new file', '/home/new.txt'))
         .pipe(snapshot.take())
@@ -69,7 +69,7 @@ it('should add a file to "addedFiles" when new file is present in second snapsho
 });
 
 it('should add a file to "removedFiles" when a file is removed from second snapshot', done => {
-    sourceBuffer('hello world', '/home/deleteme.txt')
+    sourceHelloBuffer('/home/deleteme.txt')
         .pipe(snapshot.take())
         .pipe(mut.dropFiles())
         .pipe(snapshot.take())
@@ -104,7 +104,7 @@ describe('streamed files', () => {
 
 describe('copied files', () => {
     it('should add a file to "copiedFiles" when a file is copied', done => {
-        sourceBuffer('hello world', '/home/copyme.txt')
+        sourceHelloBuffer('/home/copyme.txt')
             .pipe(snapshot.take())
             .pipe(mut.makeCopies())
             .pipe(snapshot.take())
@@ -116,7 +116,7 @@ describe('copied files', () => {
     });
 
     it('should add a file to "removedFiles" when a copy is removed', done => {
-        sourceBuffer('hello world', '/home/copyme.txt')
+        sourceHelloBuffer('/home/copyme.txt')
             .pipe(mut.makeCopies())
             .pipe(snapshot.take())
             .pipe(mut.dropFiles('/home/copyme.txt'))
@@ -128,7 +128,7 @@ describe('copied files', () => {
     });
 
     it('should supply all sources if a new file matches multiple originals', done => {
-        sourceBuffer('hello world', '/home/source-one.txt')
+        sourceHelloBuffer('/home/source-one.txt')
             .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
             .pipe(mut.addHello('/home/copy.txt'))
@@ -143,7 +143,7 @@ describe('copied files', () => {
     });
     
     it('should supply removed sources for a new copy', done => {
-        sourceBuffer('hello world', '/home/source-one.txt')
+        sourceHelloBuffer('/home/source-one.txt')
             .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
             .pipe(mut.dropFiles('/home/source-one.txt'))
@@ -156,7 +156,7 @@ describe('copied files', () => {
     });
 
     it('should mark as copy if all sources are dropped', done => {
-        sourceBuffer('hello world', '/home/source-one.txt')
+        sourceHelloBuffer('/home/source-one.txt')
             .pipe(mut.addHello('/home/source-two.txt'))
             .pipe(snapshot.take())
             .pipe(mut.dropFiles())
@@ -173,7 +173,7 @@ describe('copied files', () => {
 
 describe('no early exit/order insensivity', () => {
     it('should mark copies and originals deleted', done => {
-        sourceBuffer('hello world', '/home/hello.txt')
+        sourceHelloBuffer('/home/hello.txt')
             .pipe(mut.insertFile('some contents', '/home/file.txt'))
             .pipe(mut.addHello('/home/hello2.txt'))
             .pipe(snapshot.take())
@@ -187,7 +187,7 @@ describe('no early exit/order insensivity', () => {
     });
 
     it('should mark files changed after moves', done => {
-        sourceBuffer('hello world', '/home/moveme.txt')
+        sourceHelloBuffer('/home/moveme.txt')
             .pipe(mut.insertFile('change this', '/home/changeme.txt'))
             .pipe(snapshot.take())
             .pipe(mut.changePath('/home/moveme.txt', '/home/moved.txt'))
@@ -200,7 +200,7 @@ describe('no early exit/order insensivity', () => {
     });
 
     it('should mark files added after copies', done => {
-        sourceBuffer('hello world')
+        sourceHelloBuffer()
             .pipe(snapshot.take())
             .pipe(mut.addHello('/home/hello2.txt'))
             .pipe(mut.insertFile('new file', '/home/added.txt'))
@@ -212,7 +212,7 @@ describe('no early exit/order insensivity', () => {
     });
 
     it('should mark multiple files added', done => {
-        sourceBuffer('hello world')
+        sourceHelloBuffer()
             .pipe(snapshot.take())
             .pipe(mut.insertFile('asdf', '/home/one.txt'))
             .pipe(mut.insertFile('qwer', '/home/two.txt'))

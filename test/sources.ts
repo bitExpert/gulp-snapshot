@@ -14,8 +14,8 @@ function startVinylStream(contents: any, path: string) {
     return stream;
 }
 
-export function sourceBuffer(contents: string, path = uniquePath()) {
-    return startVinylStream(new Buffer(contents), path);
+export function sourceHelloBuffer(path = uniquePath()) {
+    return startVinylStream(new Buffer('hello world'), path);
 }
 
 export function sourceStream(chunks: string[], path = uniquePath()) {
