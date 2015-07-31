@@ -9,7 +9,7 @@ const uniquePath = (() => {
 
 function startVinylStream(contents: any, path: string) {
     const stream: Transform = <any>through.obj();
-    stream.push(new File({ path: path, contents: contents }));
+    stream.push(new File({ path, contents }));
     stream.push(null);
     return stream;
 }

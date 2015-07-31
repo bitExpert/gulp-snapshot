@@ -2,9 +2,17 @@ import * as through from 'through2';
 import { Transform } from 'stream';
 import File = require('vinyl');
 
-export function changePath(to: string) {
+export function changePath(from: string, to: string): NodeJS.ReadWriteStream
+export function changePath(to: string): NodeJS.ReadWriteStream
+export function changePath(toOrFrom: string, to?: string) {
+    const fromPath = to ? toOrFrom : null;
+    const toPath = to ? to : toOrFrom;
     return through.obj(function (file, enc, done) {
-        file.path = to;
+        if (fromPath && file.path !== fromPath) {
+            this.push(file);
+            return done();
+        }
+        file.path = toPath;
         this.push(file);
         done();
     });
@@ -12,12 +20,10 @@ export function changePath(to: string) {
 
 export function dropFiles(withPath?: string) {
     return through.obj(function (file, enc, done) {
-        if (withPath) {
-            if (file.path === withPath) {
-                return done();
-            }
-            this.push(file);
+        if (!withPath || file.path === withPath) {
+            return done();
         }
+        this.push(file);
         done();
     });
 }

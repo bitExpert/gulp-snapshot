@@ -104,7 +104,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
 
             if (pathRemoved && contentRemoved) {
                 diff.removedFiles.push(oldPath);
-                break;
+                continue;
             }
 
             if (pathRemoved && !contentRemoved && !isOneToOneMove) {
@@ -123,18 +123,18 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             if (pathIsNew && isOneToOneMove) {
                 const oldPath = oldHashesToPaths[newHash];
                 diff.movedFiles.push({ was: oldPath, is: newPath });
-                break;
+                continue;
             }
             
             if (pathIsNew && !contentsAreNew && !isOneToOneMove) {
                 const originalPaths = oldPathList.filter(path => oldPathsToHashes[path] === newHash);
                 diff.copiedFiles.push({ was: originalPaths, is: newPath });
-                break;
+                continue;
             }
 
             if (pathIsNew && contentsAreNew) {
                 diff.addedFiles.push(newPath);
-                break;
+                continue;
             }
 
             if (!pathIsNew && contentsAreNew) {

@@ -5,7 +5,7 @@ import * as snapshot from '../index';
 import * as mut from './mutators';
 import { sourceBuffer, sourceStream } from './sources';
 import File = require('vinyl');
-import 'should';
+import * as should from 'should';
 
 function contentsEqual(expected: string) {
     return function (file: File) {
@@ -171,42 +171,55 @@ describe('copied files', () => {
     });
 });
 
-it('kitchen sink', done => {
-    sourceBuffer('hello world', '/home/hello.txt')
-        .pipe(mut.addHello('/home/hello2.txt'))
-        .pipe(mut.insertFile('delete me', '/home/goodbye.txt'))
-        .pipe(mut.insertFile('delete me too', '/home/goodbye2.txt'))
-        .pipe(mut.insertFile('do not touch', '/home/notouch.txt'))
-        .pipe(mut.insertFile('touch me', '/home/touch.txt'))
-        .pipe(mut.insertFile('touch me too', '/home/touch2.txt'))
-        .pipe(snapshot.take())
-        .pipe(mut.addHello('/home/hello3.txt'))
-        .pipe(mut.insertFile('new file contents', '/home/brand/new.txt'))
-        .pipe(mut.insertFile('new file contents two', '/home/brand/new2.txt'))
-        .pipe(mut.dropFiles('/home/hello.txt'))
-        .pipe(mut.dropFiles('/home/goodbye.txt'))
-        .pipe(mut.dropFiles('/home/goodbye2.txt'))
-        .pipe(mut.changeBufferContents('touched', '/home/touch.txt'))
-        .pipe(mut.changeBufferContents('touched two', '/home/touch2.txt'))
-        .pipe(snapshot.take())
-        .pipe(snapshot.compare(diff => {
-            diff.copiedFiles[0].is.should.eql('/home/hello3.txt');
-            diff.copiedFiles[0].was.length.should.eql(2);
-            diff.copiedFiles[0].was.should.containEql('/home/hello.txt');
-            diff.copiedFiles[0].was.should.containEql('/home/hello2.txt');
+describe('no early exit/order insensivity', () => {
+    it('should mark copies and originals deleted', done => {
+        sourceBuffer('hello world', '/home/hello.txt')
+            .pipe(mut.insertFile('some contents', '/home/file.txt'))
+            .pipe(mut.addHello('/home/hello2.txt'))
+            .pipe(snapshot.take())
+            .pipe(mut.dropFiles('/home/file.txt'))
+            .pipe(mut.dropFiles('/home/hello2.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                should.deepEqual(diff.removedFiles, ['/home/file.txt', '/home/hello2.txt']);
+            }))
+            .pipe(assert.end(done));
+    });
 
-            diff.addedFiles.length.should.eql(2);
-            diff.addedFiles.should.containEql('/home/brand/new.txt');
-            diff.addedFiles.should.containEql('/home/brand/new2.txt');
+    it('should mark files changed after moves', done => {
+        sourceBuffer('hello world', '/home/moveme.txt')
+            .pipe(mut.insertFile('change this', '/home/changeme.txt'))
+            .pipe(snapshot.take())
+            .pipe(mut.changePath('/home/moveme.txt', '/home/moved.txt'))
+            .pipe(mut.changeBufferContents('changed', '/home/changeme.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                should.deepEqual(diff.changedFiles, ['/home/changeme.txt'], 'changed files');
+            }))
+            .pipe(assert.end(done));
+    });
 
-            diff.removedFiles.length.should.eql(3);
-            diff.removedFiles.should.containEql('/home/hello.txt');
-            diff.removedFiles.should.containEql('/home/goodbye.txt');
-            diff.removedFiles.should.containEql('/home/goodbye2.txt');
+    it('should mark files added after copies', done => {
+        sourceBuffer('hello world')
+            .pipe(snapshot.take())
+            .pipe(mut.addHello('/home/hello2.txt'))
+            .pipe(mut.insertFile('new file', '/home/added.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                should.deepEqual(diff.addedFiles, ['/home/added.txt']);
+            }))
+            .pipe(assert.end(done));
+    });
 
-            diff.changedFiles.length.should.eql(2);
-            diff.changedFiles.should.containEql('/home/touch.txt');
-            diff.changedFiles.should.containEql('/home/touch2.txt');
-        }))
-        .pipe(assert.end(done));
+    it('should mark multiple files added', done => {
+        sourceBuffer('hello world')
+            .pipe(snapshot.take())
+            .pipe(mut.insertFile('asdf', '/home/one.txt'))
+            .pipe(mut.insertFile('qwer', '/home/two.txt'))
+            .pipe(snapshot.take())
+            .pipe(snapshot.compare(diff => {
+                should.deepEqual(diff.addedFiles, ['/home/one.txt', '/home/two.txt']);
+            }))
+            .pipe(assert.end(done));
+    });
 });
