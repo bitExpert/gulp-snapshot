@@ -145,6 +145,25 @@ it('should add a file to "removedFiles" when a file is removed from second snaps
         .pipe(assert.end(done));
 });
 
+it('should be usable multiple times in a stream', done => {
+    const helloPath = '/home/hello.txt';
+    const newFilePath = '/home/new.txt';
+    source.buffer(helloPath)
+        .pipe(snapshot.take())
+        .pipe(mut.dropFiles())
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(diff => {
+            should.deepEqual(diff.removedFiles, [helloPath]);
+        }))
+        .pipe(mut.appendFile('new file', newFilePath))
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(diff => {
+            diff.removedFiles.length.should.eql(0);
+            should.deepEqual(diff.addedFiles, [newFilePath]);
+        }))
+        .pipe(assert.end(done));
+});
+
 describe('streamed files', () => {
     it('should detect matching states', done => {
         source.stream(['hello ', 'world', '!'])

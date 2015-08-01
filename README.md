@@ -24,7 +24,7 @@ gulp.task('default', function() {
 
 Calling compare will always compare the last two snapshots taken. Taking three or more snapshots in a row will discard the older ones.
 
-Streamed file contents are supported.
+Streamed file contents are supported (gulp.src called with `{ buffer: false}`).
 
 ## What does it tell you?
 Sadly it doesn't perform a text diff on file contents (yet).
@@ -49,6 +49,7 @@ interface IStreamDifference {
 ```
 
 * `movedFiles` also means renamed files. One and the same.
+* Files with null contents are treated as not present in the stream for comparison purposes.
 * The `copiedFiles` entry specifies originals as an array of paths. This probably seems strange, but there was really no other way I could think of to account for the possibility of multiple identical source files. The alternative was to pick one to be the 'true' source and do something different with the others, but that would seem nondeterministic and be more or less a lie.
 * One outlier worth mentioning: let's say you have two files with the same contents, A and B. Something in the stream kills one and renames the other to C. Since there's no way to tell which path C originated from, this is reported as a multi-source copy and not a move.
 * Entries in the `was` property for a copiedFiles entry may have been deleted, and will be in the `removedFiles` entry if so. In the case above, both A and B will be in `removedFiles`.
