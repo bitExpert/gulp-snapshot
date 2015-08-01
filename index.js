@@ -43,6 +43,8 @@ function containsOne(array, element) {
     return array.filter(function (v) { return element === v; }).length === 1;
 }
 function compare(resultCallback) {
+    var oldPathsToHashes = streamStates[1];
+    var newPathsToHashes = streamStates[0];
     return through.obj(passthrough, function flush(done) {
         var diff = {
             addedFiles: [],
@@ -52,8 +54,6 @@ function compare(resultCallback) {
             removedFiles: [],
             noChanges: null
         };
-        var oldPathsToHashes = streamStates[1];
-        var newPathsToHashes = streamStates[0];
         var oldHashesToPaths = invert(oldPathsToHashes); //not bijective but collisions are checked before use
         var newHashesToPaths = invert(newPathsToHashes);
         var oldPathList = Object.keys(oldPathsToHashes);

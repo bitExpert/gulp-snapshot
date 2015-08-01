@@ -75,6 +75,8 @@ function containsOne<T>(array: T[], element: T): boolean {
 }
 
 export function compare(resultCallback: (difference: IStreamDifference) => void): NodeJS.ReadWriteStream {
+    const oldPathsToHashes = streamStates[1];
+    const newPathsToHashes = streamStates[0];
     return through.obj(passthrough, <any>function flush(done: Function) {
         const diff: IStreamDifference = {
             addedFiles: [],
@@ -84,9 +86,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             removedFiles: [],
             noChanges: null
         };
-
-        const oldPathsToHashes = streamStates[1];
-        const newPathsToHashes = streamStates[0];
+        
         const oldHashesToPaths = invert<IPathsToHashes, IHashesToPaths>(oldPathsToHashes); //not bijective but collisions are checked before use
         const newHashesToPaths = invert<IPathsToHashes, IHashesToPaths>(newPathsToHashes);
         const oldPathList = Object.keys(oldPathsToHashes);
