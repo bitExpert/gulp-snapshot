@@ -103,8 +103,10 @@ it('should add a file to "movedFiles" collection when path changes and contents 
         .pipe(mut.changePath(newPath))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.movedFiles[0].was.should.eql(oldPath);
-            diff.movedFiles[0].is.should.eql(newPath);
+            should.deepEqual(diff.movedFiles, [{
+                was: oldPath,
+                is: newPath
+            }]);
         }))
         .pipe(assert.end(done));
 });
@@ -116,7 +118,7 @@ it('should add a file to "changedFiles" when contents change and path does not',
         .pipe(mut.changeBufferContents('goodbye world'))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.changedFiles[0].should.eql(path);
+            should.deepEqual(diff.changedFiles, [path]);
         }))
         .pipe(assert.end(done));
 });
@@ -128,7 +130,7 @@ it('should add a file to "addedFiles" when new file is present in second snapsho
         .pipe(mut.appendFile('new file', path))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.addedFiles[0].should.eql(path);
+            should.deepEqual(diff.addedFiles, [path]);
         }))
         .pipe(assert.end(done));
 });
@@ -140,7 +142,7 @@ it('should add a file to "removedFiles" when a file is removed from second snaps
         .pipe(mut.dropFiles())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.removedFiles[0].should.eql(path);
+            should.deepEqual(diff.removedFiles, [path]);
         }))
         .pipe(assert.end(done));
 });
@@ -182,7 +184,7 @@ describe('streamed files', () => {
             .pipe(mut.changeStreamContents(['goodbye ', 'stream']))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.changedFiles[0].should.eql(path);
+                should.deepEqual(diff.changedFiles, [path]);
             }))
             .pipe(assert.end(done));
     });
@@ -197,8 +199,10 @@ describe('copied files', () => {
             .pipe(mut.makeCopies())
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].was[0].should.eql(originalPath);
-                diff.copiedFiles[0].is.should.eql(copiedPath);
+                should.deepEqual(diff.copiedFiles, [{
+                    was: [originalPath],
+                    is: copiedPath
+                }]);
             }))
             .pipe(assert.end(done));
     });
@@ -211,7 +215,7 @@ describe('copied files', () => {
             .pipe(mut.dropFiles(path))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.removedFiles[0].should.eql(path);
+                should.deepEqual(diff.removedFiles, [path]);
             }))
             .pipe(assert.end(done));
     });
@@ -226,10 +230,10 @@ describe('copied files', () => {
             .pipe(mut.addHello(copyPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].is.should.eql(copyPath)
-                diff.copiedFiles[0].was.length.should.eql(2);
-                diff.copiedFiles[0].was.should.containEql(sourceOnePath);
-                diff.copiedFiles[0].was.should.containEql(sourceTwoPath);
+                should.deepEqual(diff.copiedFiles, [{
+                    was: [sourceOnePath, sourceTwoPath],
+                    is: copyPath
+                }]);
             }))
             .pipe(assert.end(done));
     });
@@ -261,9 +265,10 @@ describe('copied files', () => {
             .pipe(mut.addHello(copyPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].is.should.eql(copyPath);
-                diff.copiedFiles[0].was.should.containEql(sourceOnePath);
-                diff.copiedFiles[0].was.should.containEql(sourceTwoPath);
+                should.deepEqual(diff.copiedFiles, [{
+                    was: [sourceOnePath, sourceTwoPath],
+                    is: copyPath
+                }]);
             }))
             .pipe(assert.end(done));
     });
