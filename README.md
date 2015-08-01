@@ -11,7 +11,7 @@ var snapshot = require('gulp-snapshot');
 var somePlugin = require('some-plugin');
 
 gulp.task('default', function() {
-  gulp.src('/some/files/*.js)
+  gulp.src('/some/files/*.js')
     .pipe(snapshot.take())
     .pipe(somePlugin())
     .pipe(snapshot.take())
