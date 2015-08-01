@@ -7,7 +7,7 @@ import File = require('vinyl');
 export interface IStreamDifference {
     /** Files present in the second snapshot that weren't in the first */
     addedFiles: string[];
-    /** Files present in the first snapshot are aren't in the second */
+    /** Files present in the first snapshot that aren't in the second */
     removedFiles: string[];
     /** Files with the same unique contents but a changed path */
     movedFiles: { was: string, is: string }[];
