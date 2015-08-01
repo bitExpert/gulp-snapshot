@@ -13,68 +13,75 @@ function contentsEqual(expected: string) {
     };
 }
 
+const helloWorld = 'hello world';
+
 it('should not touch stream contents', done => {
     sourceHelloBuffer()
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(_ => _))
         .pipe(assert.length(1))
-        .pipe(assert.first(contentsEqual('hello world')))
+        .pipe(assert.first(contentsEqual(helloWorld)))
         .pipe(assert.end(done));
 });
 
-it('should provide a "same" property of true when states match', done => {
+it('should provide a "noChanges" property of true when states match', done => {
     sourceHelloBuffer()
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.same.should.eql(true);
+            diff.noChanges.should.eql(true);
         }))
         .pipe(assert.end(done));
 });
 
 it('should add a file to "movedFiles" collection when path changes and contents do not', done => {
+    const oldPath = '/old/file.txt';
+    const newPath = '/new/file.txt';
     sourceHelloBuffer()
-        .pipe(mut.changePath('/old/file.txt'))
+        .pipe(mut.changePath(oldPath))
         .pipe(snapshot.take())
-        .pipe(mut.changePath('/new/file.txt'))
+        .pipe(mut.changePath(newPath))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.movedFiles[0].was.should.eql('/old/file.txt');
-            diff.movedFiles[0].is.should.eql('/new/file.txt');
+            diff.movedFiles[0].was.should.eql(oldPath);
+            diff.movedFiles[0].is.should.eql(newPath);
         }))
         .pipe(assert.end(done));
 });
 
 it('should add a file to "changedFiles" when contents change and path does not', done => {
-    sourceHelloBuffer('/home/changeme.txt')
+    const path = '/home/changeme.txt';
+    sourceHelloBuffer(path)
         .pipe(snapshot.take())
         .pipe(mut.changeBufferContents('goodbye world'))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.changedFiles[0].should.eql('/home/changeme.txt');
+            diff.changedFiles[0].should.eql(path);
         }))
         .pipe(assert.end(done));
 });
 
 it('should add a file to "addedFiles" when new file is present in second snapshot', done => {
+    const path = '/home/new.txt';
     sourceHelloBuffer()
         .pipe(snapshot.take())
-        .pipe(mut.insertFile('new file', '/home/new.txt'))
+        .pipe(mut.appendFile('new file', path))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.addedFiles[0].should.eql('/home/new.txt');
+            diff.addedFiles[0].should.eql(path);
         }))
         .pipe(assert.end(done));
 });
 
 it('should add a file to "removedFiles" when a file is removed from second snapshot', done => {
-    sourceHelloBuffer('/home/deleteme.txt')
+    const path = '/home/deleteme.txt';
+    sourceHelloBuffer(path)
         .pipe(snapshot.take())
         .pipe(mut.dropFiles())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.removedFiles[0].should.eql('/home/deleteme.txt');
+            diff.removedFiles[0].should.eql(path);
         }))
         .pipe(assert.end(done));
 });
@@ -85,18 +92,19 @@ describe('streamed files', () => {
             .pipe(snapshot.take())
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.same.should.eql(true);
+                diff.noChanges.should.eql(true);
             }))
             .pipe(assert.end(done));
     });
 
     it('should detect changes', done => {
-        sourceStream(['hello', 'world', '!'], '/home/stream.txt')
+        const path = '/home/stream.txt';
+        sourceStream(['hello', 'world', '!'], path)
             .pipe(snapshot.take())
             .pipe(mut.changeStreamContents(['goodbye ', 'stream']))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.changedFiles[0].should.eql('/home/stream.txt');
+                diff.changedFiles[0].should.eql(path);
             }))
             .pipe(assert.end(done));
     });
@@ -104,68 +112,80 @@ describe('streamed files', () => {
 
 describe('copied files', () => {
     it('should add a file to "copiedFiles" when a file is copied', done => {
-        sourceHelloBuffer('/home/copyme.txt')
+        const originalPath = '/home/copyme.txt';
+        const copiedPath = '/home/copyme-Copy.txt';
+        sourceHelloBuffer(originalPath)
             .pipe(snapshot.take())
             .pipe(mut.makeCopies())
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].was[0].should.eql('/home/copyme.txt');
-                diff.copiedFiles[0].is.should.eql('/home/copyme-Copy.txt');
+                diff.copiedFiles[0].was[0].should.eql(originalPath);
+                diff.copiedFiles[0].is.should.eql(copiedPath);
             }))
             .pipe(assert.end(done));
     });
 
     it('should add a file to "removedFiles" when a copy is removed', done => {
-        sourceHelloBuffer('/home/copyme.txt')
+        const path = '/home/copyme.txt';
+        sourceHelloBuffer(path)
             .pipe(mut.makeCopies())
             .pipe(snapshot.take())
-            .pipe(mut.dropFiles('/home/copyme.txt'))
+            .pipe(mut.dropFiles(path))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.removedFiles[0].should.eql('/home/copyme.txt');
+                diff.removedFiles[0].should.eql(path);
             }))
             .pipe(assert.end(done));
     });
 
     it('should supply all sources if a new file matches multiple originals', done => {
-        sourceHelloBuffer('/home/source-one.txt')
-            .pipe(mut.addHello('/home/source-two.txt'))
+        const sourceOnePath = '/home/source-one.txt';
+        const sourceTwoPath = '/home/source-two.txt';
+        const copyPath = '/home/copy.txt';
+        sourceHelloBuffer(sourceOnePath)
+            .pipe(mut.addHello(sourceTwoPath))
             .pipe(snapshot.take())
-            .pipe(mut.addHello('/home/copy.txt'))
+            .pipe(mut.addHello(copyPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].is.should.eql('/home/copy.txt')
+                diff.copiedFiles[0].is.should.eql(copyPath)
                 diff.copiedFiles[0].was.length.should.eql(2);
-                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
-                diff.copiedFiles[0].was.should.containEql('/home/source-two.txt');
+                diff.copiedFiles[0].was.should.containEql(sourceOnePath);
+                diff.copiedFiles[0].was.should.containEql(sourceTwoPath);
             }))
             .pipe(assert.end(done));
     });
     
     it('should supply removed sources for a new copy', done => {
-        sourceHelloBuffer('/home/source-one.txt')
-            .pipe(mut.addHello('/home/source-two.txt'))
+        const sourceOnePath = '/home/source-one.txt';
+        const sourceTwoPath = '/home/source-two.txt';
+        const copyPath = '/home/copy.txt';
+        sourceHelloBuffer(sourceOnePath)
+            .pipe(mut.addHello(sourceTwoPath))
             .pipe(snapshot.take())
-            .pipe(mut.dropFiles('/home/source-one.txt'))
-            .pipe(mut.addHello('/home/copy.txt'))
+            .pipe(mut.dropFiles(sourceOnePath))
+            .pipe(mut.addHello(copyPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
+                diff.copiedFiles[0].was.should.containEql(sourceOnePath);
             }))
             .pipe(assert.end(done));
     });
 
     it('should mark as copy if all sources are dropped', done => {
-        sourceHelloBuffer('/home/source-one.txt')
-            .pipe(mut.addHello('/home/source-two.txt'))
+        const sourceOnePath = '/home/source-one.txt';
+        const sourceTwoPath = '/home/source-two.txt';
+        const copyPath = '/home/copy.txt';
+        sourceHelloBuffer(sourceOnePath)
+            .pipe(mut.addHello(sourceTwoPath))
             .pipe(snapshot.take())
             .pipe(mut.dropFiles())
-            .pipe(mut.addHello('/home/copy.txt'))
+            .pipe(mut.addHello(copyPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                diff.copiedFiles[0].is.should.eql('/home/copy.txt');
-                diff.copiedFiles[0].was.should.containEql('/home/source-one.txt');
-                diff.copiedFiles[0].was.should.containEql('/home/source-two.txt');
+                diff.copiedFiles[0].is.should.eql(copyPath);
+                diff.copiedFiles[0].was.should.containEql(sourceOnePath);
+                diff.copiedFiles[0].was.should.containEql(sourceTwoPath);
             }))
             .pipe(assert.end(done));
     });
@@ -173,52 +193,60 @@ describe('copied files', () => {
 
 describe('no early exit/order insensivity', () => {
     it('should mark copies and originals deleted', done => {
-        sourceHelloBuffer('/home/hello.txt')
-            .pipe(mut.insertFile('some contents', '/home/file.txt'))
-            .pipe(mut.addHello('/home/hello2.txt'))
+        const uniquePath = '/home/file.txt';
+        const helloPath = '/home/hello.txt';
+        const helloTwoPath = '/home/hello2.txt';
+        sourceHelloBuffer(helloPath)
+            .pipe(mut.appendFile('some contents', uniquePath))
+            .pipe(mut.addHello(helloTwoPath))
             .pipe(snapshot.take())
-            .pipe(mut.dropFiles('/home/file.txt'))
-            .pipe(mut.dropFiles('/home/hello2.txt'))
+            .pipe(mut.dropFiles(uniquePath))
+            .pipe(mut.dropFiles(helloTwoPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                should.deepEqual(diff.removedFiles, ['/home/file.txt', '/home/hello2.txt']);
+                should.deepEqual(diff.removedFiles, [uniquePath, helloTwoPath]);
             }))
             .pipe(assert.end(done));
     });
 
     it('should mark files changed after moves', done => {
-        sourceHelloBuffer('/home/moveme.txt')
-            .pipe(mut.insertFile('change this', '/home/changeme.txt'))
+        const movePath = '/home/moveme.txt';
+        const changePath = '/home/changeme.txt';
+        sourceHelloBuffer(movePath)
+            .pipe(mut.appendFile('change this', changePath))
             .pipe(snapshot.take())
-            .pipe(mut.changePath('/home/moveme.txt', '/home/moved.txt'))
-            .pipe(mut.changeBufferContents('changed', '/home/changeme.txt'))
+            .pipe(mut.changePath(movePath, '/home/moved.txt'))
+            .pipe(mut.changeBufferContents('changed', changePath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                should.deepEqual(diff.changedFiles, ['/home/changeme.txt'], 'changed files');
+                should.deepEqual(diff.changedFiles, [changePath]);
             }))
             .pipe(assert.end(done));
     });
 
     it('should mark files added after copies', done => {
+        const addedPath = '/home/added.txt';
         sourceHelloBuffer()
             .pipe(snapshot.take())
             .pipe(mut.addHello('/home/hello2.txt'))
-            .pipe(mut.insertFile('new file', '/home/added.txt'))
+            .pipe(mut.appendFile('new file', addedPath))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                should.deepEqual(diff.addedFiles, ['/home/added.txt']);
+                should.deepEqual(diff.addedFiles, [addedPath]);
             }))
             .pipe(assert.end(done));
     });
 
     it('should mark multiple files added', done => {
+        const pathOne = '/home/one.txt';
+        const pathTwo = '/home/two.txt'
         sourceHelloBuffer()
             .pipe(snapshot.take())
-            .pipe(mut.insertFile('asdf', '/home/one.txt'))
-            .pipe(mut.insertFile('qwer', '/home/two.txt'))
+            .pipe(mut.appendFile('asdf', pathOne))
+            .pipe(mut.appendFile('qwer', pathTwo))
             .pipe(snapshot.take())
             .pipe(snapshot.compare(diff => {
-                should.deepEqual(diff.addedFiles, ['/home/one.txt', '/home/two.txt']);
+                should.deepEqual(diff.addedFiles, [pathOne, pathTwo]);
             }))
             .pipe(assert.end(done));
     });

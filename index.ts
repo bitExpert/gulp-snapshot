@@ -16,7 +16,7 @@ export interface IStreamDifference {
     /** Files with the same path but changed contents */
     changedFiles: string[];
     /** True if snapshots are identical (all change collections are empty) */
-    same: boolean;
+    noChanges: boolean;
 }
 
 interface IPathsToHashes {
@@ -82,7 +82,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             movedFiles: [],
             copiedFiles: [],
             removedFiles: [],
-            same: null
+            noChanges: null
         };
 
         const oldPathsToHashes = streamStates[1];
@@ -142,7 +142,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             }
         }
 
-        diff.same =
+        diff.noChanges =
             diff.addedFiles.length === 0 &&
             diff.changedFiles.length === 0 &&
             diff.copiedFiles.length === 0 &&

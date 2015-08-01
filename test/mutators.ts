@@ -49,7 +49,7 @@ export function changeStreamContents(to: string[]) {
     });
 }
 
-export function insertFile(contents: string, path: string) {
+export function appendFile(contents: string, path: string) {
     return through.obj(function (file, enc, done) {
         this.push(file);
         done();

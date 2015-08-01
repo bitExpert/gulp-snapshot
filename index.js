@@ -50,7 +50,7 @@ function compare(resultCallback) {
             movedFiles: [],
             copiedFiles: [],
             removedFiles: [],
-            same: null
+            noChanges: null
         };
         var oldPathsToHashes = streamStates[1];
         var newPathsToHashes = streamStates[0];
@@ -102,7 +102,7 @@ function compare(resultCallback) {
                 diff.changedFiles.push(newPath);
             }
         }
-        diff.same =
+        diff.noChanges =
             diff.addedFiles.length === 0 &&
                 diff.changedFiles.length === 0 &&
                 diff.copiedFiles.length === 0 &&
