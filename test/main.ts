@@ -13,10 +13,11 @@ function contentsEqual(expected: string) {
     };
 }
 
-const helloWorld = 'hello world';
-
 it('should not touch stream contents', done => {
+    const helloWorld = 'hello world';
     sourceHelloBuffer()
+        .pipe(mut.dropFiles())
+        .pipe(mut.appendFile(helloWorld, '/home/hello.txt'))
         .pipe(snapshot.take())
         .pipe(snapshot.take())
         .pipe(snapshot.compare(_ => _))
