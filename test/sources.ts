@@ -7,20 +7,26 @@ const uniquePath = (() => {
     return () => '/home/file/' + i++ + '.txt';
 })();
 
-function startVinylStream(contents: any, path: string) {
+export function vinylStream(contents: any, path: string) {
     const stream: Transform = <any>through.obj();
     stream.push(new File({ path, contents }));
     stream.push(null);
     return stream;
 }
 
-export function sourceHelloBuffer(path = uniquePath()) {
-    return startVinylStream(new Buffer('hello world'), path);
+export function emptyStream() {
+    const stream: Transform = <any>through.obj();
+    stream.push(null);
+    return stream;
 }
 
-export function sourceStream(chunks: string[], path = uniquePath()) {
+export function buffer(path = uniquePath(), contents = 'hello world') {
+    return vinylStream(new Buffer(contents), path);
+}
+
+export function stream(chunks: string[], path = uniquePath()) {
     const fileStream: Transform = <any>through();
     chunks.forEach(c => fileStream.push(c));
     fileStream.push(null);
-    return startVinylStream(fileStream, path);
+    return vinylStream(fileStream, path);
 }

@@ -77,6 +77,10 @@ function containsOne<T>(array: T[], element: T): boolean {
 export function compare(resultCallback: (difference: IStreamDifference) => void): NodeJS.ReadWriteStream {
     const oldPathsToHashes = streamStates[1];
     const newPathsToHashes = streamStates[0];
+    if (!oldPathsToHashes || !newPathsToHashes) {
+        throw new Error('gulp-snapshot: take must be called twice before calling compare');
+    }
+
     return through.obj(passthrough, <any>function flush(done: Function) {
         const diff: IStreamDifference = {
             addedFiles: [],
