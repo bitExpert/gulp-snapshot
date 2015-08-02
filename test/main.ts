@@ -8,7 +8,7 @@ import * as snapshot from '../index';
 import * as mut from './mutators';
 import * as source from './sources';
 
-const notCalledTwiceError = /take must be called twice/; 
+const notCalledTwiceError = /take must be called twice/;
 
 it('should throw when compare is called before take is called', () => {
     function badStream() {
@@ -27,6 +27,21 @@ it('should throw if take is only called once', () => {
     }
     
     badStream.should.throw(notCalledTwiceError);
+});
+
+it('should provide the stream as `this` when calling the compare callback', done => {
+    const evtType = 'some-event-type';
+    const evtMessage = 'some event content';
+    source.buffer()
+        .pipe(snapshot.take())
+        .pipe(snapshot.take())
+        .pipe(snapshot.compare(function () {
+            this.emit(evtType, evtMessage);
+        }))
+        .on(evtType, (message: string) => {
+            message.should.eql(evtMessage);
+            done();
+        });
 });
 
 it('should reset snapshots when reset is called', () => {

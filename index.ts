@@ -153,7 +153,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             diff.movedFiles.length === 0 &&
             diff.removedFiles.length === 0
 
-        resultCallback(diff);
+        resultCallback.call(this, diff);
         done();
     });
 }
