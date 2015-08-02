@@ -54,8 +54,7 @@ function compare(resultCallback) {
             changedFiles: [],
             movedFiles: [],
             copiedFiles: [],
-            removedFiles: [],
-            noChanges: null
+            removedFiles: []
         };
         var oldHashesToPaths = invert(oldPathsToHashes); //not bijective but collisions are checked before use
         var newHashesToPaths = invert(newPathsToHashes);
@@ -105,12 +104,17 @@ function compare(resultCallback) {
                 diff.changedFiles.push(newPath);
             }
         }
-        diff.noChanges =
-            diff.addedFiles.length === 0 &&
-                diff.changedFiles.length === 0 &&
-                diff.copiedFiles.length === 0 &&
-                diff.movedFiles.length === 0 &&
-                diff.removedFiles.length === 0;
+        var streamHasAnyChanges = false;
+        for (var _b = 0, _c = Object.keys(diff); _b < _c.length; _b++) {
+            var collection = _c[_b];
+            if (diff[collection].length === 0) {
+                delete diff[collection];
+            }
+            else {
+                streamHasAnyChanges = true;
+            }
+        }
+        diff.noChanges = !streamHasAnyChanges;
         resultCallback.call(this, diff);
         done();
     });

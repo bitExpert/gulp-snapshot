@@ -175,7 +175,7 @@ it('should be usable multiple times in a stream', done => {
         .pipe(mut.appendFile('new file', newFilePath))
         .pipe(snapshot.take())
         .pipe(snapshot.compare(diff => {
-            diff.removedFiles.length.should.eql(0);
+            should.not.exist(diff.removedFiles);
             should.deepEqual(diff.addedFiles, [newFilePath]);
         }))
         .pipe(assert.end(done));

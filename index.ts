@@ -5,18 +5,19 @@ import * as invert from 'invert-hash';
 import File = require('vinyl');
 
 export interface IStreamDifference {
+    [collection: string]: any;
     /** Files present in the second snapshot that weren't in the first */
-    addedFiles: string[];
+    addedFiles?: string[];
     /** Files present in the first snapshot that aren't in the second */
-    removedFiles: string[];
+    removedFiles?: string[];
     /** Files with the same unique contents but a changed path */
-    movedFiles: { was: string, is: string }[];
+    movedFiles?: { was: string, is: string }[];
     /** Files with the same non-unique contents given a new path */
-    copiedFiles: { was: string[], is: string }[];
+    copiedFiles?: { was: string[], is: string }[];
     /** Files with the same path but changed contents */
-    changedFiles: string[];
+    changedFiles?: string[];
     /** True if snapshots are identical (all change collections are empty) */
-    noChanges: boolean;
+    noChanges?: boolean;
 }
 
 interface IPathsToHashes {
@@ -87,8 +88,7 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             changedFiles: [],
             movedFiles: [],
             copiedFiles: [],
-            removedFiles: [],
-            noChanges: null
+            removedFiles: []
         };
         
         const oldHashesToPaths = invert<IPathsToHashes, IHashesToPaths>(oldPathsToHashes); //not bijective but collisions are checked before use
@@ -146,13 +146,16 @@ export function compare(resultCallback: (difference: IStreamDifference) => void)
             }
         }
 
-        diff.noChanges =
-            diff.addedFiles.length === 0 &&
-            diff.changedFiles.length === 0 &&
-            diff.copiedFiles.length === 0 &&
-            diff.movedFiles.length === 0 &&
-            diff.removedFiles.length === 0
+        let streamHasAnyChanges = false;
+        for (const collection of Object.keys(diff)) {
+            if (diff[collection].length === 0) {
+                delete diff[collection];
+            } else {
+                streamHasAnyChanges = true;
+            }
+        }
 
+        diff.noChanges = !streamHasAnyChanges;
         resultCallback.call(this, diff);
         done();
     });

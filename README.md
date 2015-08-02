@@ -95,9 +95,6 @@ gulp.task('default', function() {
           "c:\project\styles\main.css",
           "c:\project\styles\nav.css"
         ],
-        changedFiles: [],
-        movedFiles: [],
-        copiedFiles: [],
         removedFiles: [
           "c:\project\styles\main.less",
           "c:\project\styles\nav.less"
@@ -111,13 +108,9 @@ gulp.task('default', function() {
        // gulp-autoprefixer only found work to do in nav.css,
 	   // so the output is:
        {
-        addedFiles: [],
         changedFiles: [
           "c:\project\styles\nav.css"
         ],
-        movedFiles: [],
-        copiedFiles: [],
-        removedFiles: [],
         noChanges: false
        }
     }))
