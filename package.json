@@ -1,7 +1,7 @@
 {
   "name": "gulp-snapshot",
-  "version": "0.0.1",
-  "description": "Take and compare hash-based snapshots of Gulp stream states",
+  "version": "1.0.0",
+  "description": "Compare snapshots of Gulp stream states",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -12,6 +12,7 @@
   "keywords": [
     "gulpplugin",
     "diff",
+    "difference",
     "changed",
     "hash",
     "delta"
