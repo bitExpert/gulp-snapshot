@@ -6,6 +6,7 @@ This doesn't touch file contents, it informs you when other things do.
 If you'd like save and restore snapshots instead of comparing them, check out [gulp-save](https://www.npmjs.com/package/gulp-save).
 
 ## Usage
+`$ npm install gulp-snapshot`
 
 ```javascript
 var gulp = require('gulp');
@@ -24,9 +25,11 @@ gulp.task('default', function() {
 });
 ```
 
-Calling compare will always compare the last two snapshots taken. Taking three or more snapshots in a row will discard the older ones.
+Calling `compare` will always compare the last two snapshots taken. Taking three or more snapshots in a row will discard the older ones.
 
 Streamed file contents are supported.
+
+For the callback provided to `compare`, `this` is set to the Gulp stream.
 
 ## What's it for?
 * Troubleshooting plugins in your build pipeline (where are files getting dropped? what is changing a certain file's content? etc)
@@ -85,7 +88,8 @@ gulp.task('default', function() {
     .pipe(less())
     .pipe(snapshot.take())
     .pipe(snapshot.compare(function(diff) {
-      // gulp-less has dropped the source files from the stream and added compiled css files, so the output is:
+      // gulp-less has dropped the source files from the stream and
+	  // added compiled css files, so the output is:
       {
         addedFiles: [
           "c:\project\styles\main.css",
@@ -104,7 +108,8 @@ gulp.task('default', function() {
     .pipe(prefix())
     .pipe(snapshot.take())
     .pipe(snapshot.compare(function(diff) {
-       // gulp-autoprefixer only found work to do in nav.css, so the output is:
+       // gulp-autoprefixer only found work to do in nav.css,
+	   // so the output is:
        {
         addedFiles: [],
         changedFiles: [
