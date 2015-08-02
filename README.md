@@ -87,9 +87,9 @@ gulp.task('default', function() {
     .pipe(snapshot.take())
     .pipe(less())
     .pipe(snapshot.take())
-    .pipe(snapshot.compare(function(diff) {
+    .pipe(snapshot.compare(function(difference) {
       // gulp-less has dropped the source files from the stream and
-	  // added compiled css files, so the output is:
+      // added compiled css files, so `difference` would be:
       {
         addedFiles: [
           "c:\project\styles\main.css",
@@ -104,15 +104,15 @@ gulp.task('default', function() {
     }))
     .pipe(prefix())
     .pipe(snapshot.take())
-    .pipe(snapshot.compare(function(diff) {
-       // gulp-autoprefixer only found work to do in nav.css,
-	   // so the output is:
-       {
+    .pipe(snapshot.compare(function(difference) {
+      // gulp-autoprefixer only found work to do in nav.css,
+      // so `difference` would be:
+      {
         changedFiles: [
           "c:\project\styles\nav.css"
         ],
         noChanges: false
-       }
+      }
     }))
     .pipe(gulp.dest('out'));
 });
