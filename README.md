@@ -1,7 +1,9 @@
 # gulp-snapshot [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url]
-[Gulp](http://gulpjs.com/) plugin for taking and comparing snapshots of Gulp stream states. 
+[Gulp](http://gulpjs.com/) meta-plugin for comparing snapshots of Gulp stream states. 
 
 This doesn't touch file contents, it informs you when other things do.
+
+If you'd like save and restore snapshots instead of comparing them, check out [gulp-save](https://www.npmjs.com/package/gulp-save).
 
 ## Usage
 
@@ -24,35 +26,99 @@ gulp.task('default', function() {
 
 Calling compare will always compare the last two snapshots taken. Taking three or more snapshots in a row will discard the older ones.
 
-Streamed file contents are supported (gulp.src called with `{ buffer: false}`).
+Streamed file contents are supported.
+
+## What's it for?
+* Troubleshooting plugins in your build pipeline (where are files getting dropped? what is changing a certain file's content? etc)
+* Developing plugins
+* Turning any sort of code or file formatter into a pass/fail linter
 
 ## What does it tell you?
 Sadly it doesn't perform a text diff on file contents (yet).
 
-The callback you provide to compare is called with one of these:
+The callback you provide to compare is called with an object like this. All strings are file paths.
 
-```typescript
-interface IStreamDifference {
+```javascript
+{
     /** Files present in the second snapshot that weren't in the first */
-    addedFiles: string[];
+    addedFiles: String[];
     /** Files present in the first snapshot that aren't in the second */
-    removedFiles: string[];
-    /** Files with the same unique contents but a changed path */
-    movedFiles: { was: string, is: string }[];
+    removedFiles: String[];
+    /** Files with the same unique contents but a changed path, i.e. renames */
+    movedFiles: {
+        was: String,
+        is: String
+    }[];
     /** Files with the same non-unique contents given a new path */
-    copiedFiles: { was: string[], is: string }[];
+    copiedFiles: {
+        was: String[],
+        is: String
+    }[];
     /** Files with the same path but changed contents */
-    changedFiles: string[];
+    changedFiles: String[];
     /** True if snapshots are identical (all change collections are empty) */
-    noChanges: boolean;
+    noChanges: Boolean;
 }
 ```
 
-* `movedFiles` also means renamed files. One and the same.
-* Files with null contents are treated as not present in the stream for comparison purposes.
-* The `copiedFiles` entry specifies originals as an array of paths. This probably seems strange, but there was really no other way I could think of to account for the possibility of multiple identical source files. The alternative was to pick one to be the 'true' source and do something different with the others, but that would seem nondeterministic and be more or less a lie.
-* One outlier worth mentioning: let's say you have two files with the same contents, A and B. Something in the stream kills one and renames the other to C. Since there's no way to tell which path C originated from, this is reported as a multi-source copy and not a move.
-* Entries in the `was` property for a copiedFiles entry may have been deleted, and will be in the `removedFiles` entry if so. In the case above, both A and B will be in `removedFiles`.
+### Null files
+Files with null contents are treated as not present in the stream for comparison purposes. So if a plugin nulls out a file's contents, it is treated as a removal, and if it gives a null file content, it is treated as an addition.
+
+### Changes
+Files are compared by hashing their contents with SHA1. Any change in file contents, whether it's whitespace, a BOM, or a single character, will result in a different hash and trigger a `changedFiles` entry. 
+
+### Copies
+The `copiedFiles` entry specifies originals as an array of paths because of the possibility of multiple identical source files. If you've got duplicate files in the stream on either end of a comparison, the output will be as explicit as possible and won't make any assumptions or take any guesses.
+
+## Example
+Here's a verbose example that annotates a build pipeline involving gulp-less and gulp-autoprefixer operating on a couple LESS files.
+
+```javascript
+var gulp = require('gulp');
+var less = require('gulp-less');
+var prefix = require('gulp-autoprefixer')
+var snapshot = require('gulp-snapshot')
+
+gulp.task('default', function() {
+  return gulp.src('styles/*.less')
+    .pipe(snapshot.take())
+    .pipe(less())
+    .pipe(snapshot.take())
+    .pipe(snapshot.compare(function(diff) {
+      // gulp-less has dropped the source files from the stream and added compiled css files, so the output is:
+      {
+        addedFiles: [
+          "c:\project\styles\main.css",
+          "c:\project\styles\nav.css"
+        ],
+        changedFiles: [],
+        movedFiles: [],
+        copiedFiles: [],
+        removedFiles: [
+          "c:\project\styles\main.less",
+          "c:\project\styles\nav.less"
+        ],
+        noChanges: false
+      }
+    }))
+    .pipe(prefix())
+    .pipe(snapshot.take())
+    .pipe(snapshot.compare(function(diff) {
+       // gulp-autoprefixer only found work to do in nav.css, so the output is:
+       {
+        addedFiles: [],
+        changedFiles: [
+          "c:\project\styles\nav.css"
+        ],
+        movedFiles: [],
+        copiedFiles: [],
+        removedFiles: [],
+        noChanges: false
+       }
+    }))
+    .pipe(gulp.dest('out'));
+});
+```
 
 ## License
 MIT License (Expat)
