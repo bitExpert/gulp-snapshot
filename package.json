@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jwbay/gulp-compare-stream.git"
+    "url": "https://github.com/jwbay/gulp-snapshot.git"
   },
   "devDependencies": {
     "mocha": "^2.2.5",
