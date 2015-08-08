@@ -1,9 +1,9 @@
 # gulp-snapshot [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url]
 [Gulp](http://gulpjs.com/) meta-plugin for comparing snapshots of Gulp stream states. 
 
-This doesn't touch file contents, it informs you when other things do.
+This doesn't touch files, it informs you when other things do.
 
-If you'd like save and restore snapshots instead of comparing them, check out [gulp-save](https://www.npmjs.com/package/gulp-save).
+If you'd like to save and restore snapshots instead of comparing them, check out [gulp-save](https://www.npmjs.com/package/gulp-save).
 
 ## Usage
 `$ npm install gulp-snapshot`
@@ -32,7 +32,7 @@ Streamed file contents are supported.
 For the callback provided to `compare`, `this` is set to the Gulp stream.
 
 ## What's it for?
-* Troubleshooting plugins in your build pipeline (where are files getting dropped? what is changing a certain file's content? etc)
+* Troubleshooting plugins in your build pipeline (where are files getting dropped? what's changing a certain file's content? etc)
 * Developing plugins
 * Turning any sort of code or file formatter into a pass/fail linter
 
